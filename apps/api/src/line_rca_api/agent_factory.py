@@ -1,4 +1,4 @@
-"""Composition root: the one place that turns settings into a wired kernel.
+"""Composition root: the one place that turns settings plus a session into a wired kernel.
 
 Everything above this line depends on `Protocol`s; everything below is a concrete choice.
 This is what makes `LRC_LLM_PROVIDER=fake` (offline demo, CI) and a real provider the same
@@ -6,6 +6,8 @@ code path with a different injection — no conditionals inside the kernel.
 """
 
 from __future__ import annotations
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from line_rca_agent.contracts import LLMProvider
 from line_rca_agent.executors import ReActExecutor
@@ -16,7 +18,13 @@ from line_rca_agent.providers import ScriptedProvider
 from line_rca_agent.tools import InMemoryToolRegistry
 from line_rca_agent.trace import NullTraceSink, StdoutTraceSink, TraceSink
 from line_rca_api.config import Settings
-from line_rca_api.demo import demo_script, register_demo_tools
+from line_rca_api.db.repositories import (
+    SqlDefectRepository,
+    SqlTelemetryRepository,
+    SqlWorkOrderRepository,
+)
+from line_rca_api.demo import demo_script
+from line_rca_api.tools import register_line_tools
 
 
 class NotYetImplementedError(RuntimeError):
@@ -49,9 +57,20 @@ def build_provider(settings: Settings) -> LLMProvider:
             )
 
 
-def build_kernel(settings: Settings) -> AgentKernel:
+def build_kernel(
+    settings: Settings,
+    session: AsyncSession,
+    *,
+    run_id: str | None = None,
+) -> AgentKernel:
     provider = build_provider(settings)
-    tools = register_demo_tools(InMemoryToolRegistry())
+    tools = register_line_tools(
+        InMemoryToolRegistry(),
+        defects=SqlDefectRepository(session),
+        telemetry=SqlTelemetryRepository(session),
+        work_orders=SqlWorkOrderRepository(session),
+        run_id=run_id,
+    )
     return AgentKernel(
         planner=PlanExecutePlanner(provider),
         executor=ReActExecutor(provider, tools),

@@ -17,7 +17,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from line_rca_agent.contracts import Goal
-from line_rca_api.deps import KernelDep
+from line_rca_api.deps import RuntimeDep
 
 router = APIRouter(prefix="/api", tags=["agent"])
 
@@ -35,31 +35,34 @@ class AnalyzeRequest(BaseModel):
 
 
 @router.get("/tools")
-async def list_tools(kernel: KernelDep) -> dict[str, Any]:
-    return {"tools": kernel.tools.schemas()}
+async def list_tools(runtime: RuntimeDep) -> dict[str, Any]:
+    return {"tools": runtime.kernel.tools.schemas()}
 
 
 @router.post("/analyze")
-async def analyze(request: AnalyzeRequest, kernel: KernelDep) -> StreamingResponse:
+async def analyze(request: AnalyzeRequest, runtime: RuntimeDep) -> StreamingResponse:
     goal = Goal(text=request.goal, context=request.context)
+    run_id = runtime.run_id
 
     async def frames() -> AsyncIterator[str]:
-        async for event in kernel.run(goal):
+        async for event in runtime.kernel.run(goal, run_id=run_id):
             yield event.to_sse()
 
     return StreamingResponse(frames(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @router.post("/analyze/collect")
-async def analyze_collect(request: AnalyzeRequest, kernel: KernelDep) -> dict[str, Any]:
+async def analyze_collect(request: AnalyzeRequest, runtime: RuntimeDep) -> dict[str, Any]:
     goal = Goal(text=request.goal, context=request.context)
-    events = [event.to_dict() async for event in kernel.run(goal)]
+    run_id = runtime.run_id
+    events = [event.to_dict() async for event in runtime.kernel.run(goal, run_id=run_id)]
     answer = next(
         (event["payload"].get("text") for event in events if event["type"] == "answer"),
         None,
     )
     failed = next((event for event in events if event["type"] == "run.failed"), None)
     return {
+        "runId": run_id,
         "goal": request.goal,
         "events": events,
         "answer": answer,

@@ -38,6 +38,23 @@ services:
     ports:
       - "1883:1883"
 
+  # One-shot migration + seed. Kept out of the API on purpose: a service that silently
+  # migrates its own database is hard to reason about, and one that seeds data is worse.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        UV_VERSION: ${UV_VERSION:-0.13.1}
+    command: ["python", "-m", "line_rca_api.db.bootstrap"]
+    environment:
+      LRC_DATABASE_URL: postgresql+asyncpg://lrc:lrc@postgres:5432/lrc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: .
@@ -56,8 +73,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      # The API waits for the schema and seed data, so `docker compose up` stays a single
+      # command that produces a working demo rather than a 500 on the first request.
+      migrate:
+        condition: service_completed_successfully
       mosquitto:
         condition: service_started
 

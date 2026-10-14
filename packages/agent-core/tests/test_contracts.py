@@ -83,6 +83,28 @@ def test_registry_schema_shape_is_mcp_compatible() -> None:
     assert schema["inputSchema"]["type"] == "object"
 
 
+def test_registry_presents_tools_in_a_stable_order() -> None:
+    """Registration order must not leak: it would make prompts depend on import order."""
+    forward = InMemoryToolRegistry(
+        [
+            FunctionTool("b_tool", "b", {}, _noop_handler),
+            FunctionTool("a_tool", "a", {}, _noop_handler),
+        ]
+    )
+    backward = InMemoryToolRegistry(
+        [
+            FunctionTool("a_tool", "a", {}, _noop_handler),
+            FunctionTool("b_tool", "b", {}, _noop_handler),
+        ]
+    )
+
+    assert forward.names() == backward.names() == ["a_tool", "b_tool"]
+    assert [schema["name"] for schema in forward.schemas()] == ["a_tool", "b_tool"]
+    # The catalogue and the name list must agree, or two endpoints can describe one
+    # registry differently.
+    assert forward.names() == [schema["name"] for schema in forward.schemas()]
+
+
 def _imported_roots(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     roots: set[str] = set()

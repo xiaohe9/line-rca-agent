@@ -59,13 +59,16 @@ class InMemoryToolRegistry:
         return sorted(self._tools)
 
     def schemas(self) -> list[dict[str, Any]]:
+        # Sorted for the same reason `names()` is: the tool catalogue is part of the request
+        # prefix, so registration order leaking into it would make prompts depend on import
+        # order — and would make `/health` and `/api/tools` disagree about the same registry.
         return [
             {
                 "name": tool.name,
                 "description": tool.description,
                 "inputSchema": tool.input_schema(),
             }
-            for tool in self._tools.values()
+            for tool in (self._tools[name] for name in sorted(self._tools))
         ]
 
     def __len__(self) -> int:

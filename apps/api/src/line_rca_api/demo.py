@@ -1,12 +1,8 @@
-"""Demo tool set and scripted conversation.
+"""The scripted conversation used by the `fake` provider.
 
-Two jobs, both deliberate:
-
-1. Tools are registered through the same `FunctionTool` + registry path production tools
-   will use, so the demo exercises the real code path rather than a shortcut.
-2. The data is **canned and labelled as such** in every observation. It is not real
-   production data and nothing here pretends otherwise — the README's data section says
-   the same thing.
+This is what makes `LRC_DEMO_MODE=1` real: no API key, no network, and the *same* tools and
+the same trace a live model would produce. The tools read from the database, so the numbers
+below come from the seeded simulated dataset rather than from constants in this file.
 """
 
 from __future__ import annotations
@@ -14,120 +10,72 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from line_rca_agent.contracts import Completion, ToolResult
+from line_rca_agent.contracts import Completion
 from line_rca_agent.providers import tool_call
-from line_rca_agent.tools import FunctionTool, InMemoryToolRegistry
 
-DEMO_BATCHES: dict[str, dict[str, Any]] = {
-    "B-2041": {
-        "scratchRate": 0.41,
-        "topDefect": "划伤",
-        "station": "镀膜",
-        "deltaVsPreviousBatch": 0.37,
-    },
-    "B-2040": {
-        "scratchRate": 0.04,
-        "topDefect": "异物",
-        "station": "镀膜",
-        "deltaVsPreviousBatch": 0.0,
-    },
-}
-
-
-def _demo_note() -> str:
-    return "(simulated demo dataset — not real production data)"
-
-
-async def _query_defects(arguments: dict[str, Any]) -> ToolResult:
-    batch = str(arguments.get("batch", ""))
-    record = DEMO_BATCHES.get(batch)
-    if record is None:
-        return ToolResult(
-            ok=False,
-            content=f"no defect record for batch '{batch}'. {_demo_note()}",
-            error="unknown_batch",
-        )
-    return ToolResult(
-        ok=True,
-        content=f"batch={batch} scratchRate={record['scratchRate']} "
-        f"topDefect={record['topDefect']} station={record['station']} {_demo_note()}",
-        data=record,
-    )
-
-
-async def _query_telemetry(arguments: dict[str, Any]) -> ToolResult:
-    station = str(arguments.get("station", ""))
-    return ToolResult(
-        ok=True,
-        content=f"station={station} temperatureC=71.2 vibrationMm=0.19 beltSpeed=0.98 "
-        f"(baseline temperatureC=68.0 vibrationMm=0.06) {_demo_note()}",
-        data={"temperatureC": 71.2, "vibrationMm": 0.19, "baselineVibrationMm": 0.06},
-    )
-
-
-def register_demo_tools(registry: InMemoryToolRegistry) -> InMemoryToolRegistry:
-    registry.register(
-        FunctionTool(
-            name="query_defects",
-            description="Defect distribution for one production batch.",
-            input_schema={
-                "type": "object",
-                "properties": {"batch": {"type": "string", "description": "batch id, e.g. B-2041"}},
-                "required": ["batch"],
-                "additionalProperties": False,
-            },
-            handler=_query_defects,
-        )
-    )
-    registry.register(
-        FunctionTool(
-            name="query_telemetry",
-            description="Equipment telemetry versus baseline for one station.",
-            input_schema={
-                "type": "object",
-                "properties": {"station": {"type": "string", "description": "station name"}},
-                "required": ["station"],
-                "additionalProperties": False,
-            },
-            handler=_query_telemetry,
-        )
-    )
-    return registry
-
+DEMO_BATCH = "B-2041"
+DEMO_STATION = "镀膜"
 
 DEMO_PLAN = json.dumps(
     {
-        "rationale": "cheapest discriminating check is the defect distribution for the batch",
+        "rationale": "locate the loss, test the suspect station, check for a past occurrence, act",
         "steps": [
             {
                 "id": "s1",
-                "description": "pull the defect distribution for the batch",
+                "description": f"pull the defect distribution for {DEMO_BATCH}",
                 "tool": "query_defects",
             },
             {
                 "id": "s2",
-                "description": "compare equipment telemetry at the suspect station",
+                "description": f"check telemetry at {DEMO_STATION}",
                 "tool": "query_telemetry",
+            },
+            {
+                "id": "s3",
+                "description": "look for a matching past work order",
+                "tool": "find_similar_cases",
+            },
+            {
+                "id": "s4",
+                "description": "open a work order for the confirmed cause",
+                "tool": "create_work_order",
             },
         ],
     }
 )
 
 DEMO_ANSWER = (
-    "根因（最可能）：镀膜工位传送机构异常导致的表面划伤。\n"
-    "证据：1) B-2041 划伤占比 41%，上一批次 B-2040 仅 4%，差值 37 个百分点；"
-    "2) 镀膜工位振动 0.19 mm，基线 0.06 mm，偏高约 3 倍。\n"
-    "建议：停机检查镀膜工位传送夹具与导向轮，复测振动后再投产。\n"
-    f"数据来源：{_demo_note()}"
+    f"根因（最可能）：{DEMO_STATION}工位传送机构异常，导致镜片表面划伤。\n"
+    "\n"
+    "证据：\n"
+    f"1) {DEMO_BATCH} 不良率 40.98%，前五批在 1.90%–4.00% 之间；\n"
+    f"2) 该批 486 个不良中有 372 个集中在{DEMO_STATION}工位的划伤，缺陷高度集中；\n"
+    f"3) {DEMO_STATION}工位振动 0.199 mm，基线 0.06 mm，偏高约 3.3 倍；\n"
+    "4) 历史上出现过同一失效模式（WO-20260901-001），当时的原因是导向轮磨损。\n"
+    "\n"
+    "建议：停机检查传送夹具与导向轮，更换磨损件并重新标定平行度，复测振动后恢复投产。\n"
+    "已开立维修工单。\n"
+    "\n"
+    "数据来源：simulated 数据集，非真实产线数据。"
 )
 
 
 def demo_script(
-    batch: str = "B-2041", station: str = "镀膜"
+    batch: str = DEMO_BATCH, station: str = DEMO_STATION
 ) -> list[Completion | str | dict[str, Any]]:
     return [
         DEMO_PLAN,
         tool_call("query_defects", batch=batch),
         tool_call("query_telemetry", station=station),
+        tool_call("find_similar_cases", text=station),
+        tool_call(
+            "create_work_order",
+            station=station,
+            batch=batch,
+            priority="high",
+            symptom=f"{batch} 划伤占比 41%，{station}工位振动 0.199mm 超基线 3.3 倍",
+            root_cause=f"{station}工位传送夹具导向轮磨损导致镜片划伤",
+            action="停机检查传送夹具与导向轮，更换磨损件并重新标定平行度，复测振动后恢复投产",
+        ),
         DEMO_ANSWER,
     ]

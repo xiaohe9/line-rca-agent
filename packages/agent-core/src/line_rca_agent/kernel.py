@@ -34,13 +34,17 @@ class AgentKernel:
     sink: TraceSink = field(default_factory=NullTraceSink)
     max_steps: int = 12
 
-    async def run(self, goal: Goal) -> AsyncIterator[TraceEvent]:
+    async def run(self, goal: Goal, *, run_id: str | None = None) -> AsyncIterator[TraceEvent]:
         """Run to completion, yielding every event as it happens.
 
         Yielding *and* forwarding to the sink means the API layer can stream straight to
         SSE while the sink independently persists or exports the same events.
+
+        `run_id` may be supplied by the caller so that collaborators built alongside the
+        kernel — a work-order tool, for instance — can record which run recommended them.
+        The kernel does not need to know why.
         """
-        run_id = f"run-{uuid4().hex[:12]}"
+        run_id = run_id or f"run-{uuid4().hex[:12]}"
         counter = itertools.count(1)
 
         async def emit(event_type: EventType, payload: dict[str, object]) -> TraceEvent:

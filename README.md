@@ -25,13 +25,16 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 
 | Area | State |
 |---|---|
-| `packages/agent-core` — framework-free kernel (contracts, trace, planner, executor, memory, tools, fake provider) | ✅ implemented + tested (29 tests) |
+| `packages/agent-core` — framework-free kernel (contracts, trace, planner, executor, memory, tools, fake provider) | ✅ implemented + tested |
 | `apps/api` — FastAPI adapter, SSE streaming, config | ✅ implemented + tested |
-| `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested (26 tests) |
-| Docker images + compose stack | ✅ built + verified end to end |
+| Persistence — SQLAlchemy 2 + Alembic migrations, seeded line data | ✅ implemented + tested |
+| Real tools — defect distribution, telemetry, work orders, similar cases | ✅ implemented + tested |
+| `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested |
+| Docker images + compose stack | ✅ built + verified end to end (15 checks) |
 | GitHub Actions CI | ✅ written — unverified until the repo exists on GitHub |
+| MQTT telemetry ingest | ⏳ next (the broker already runs) |
+| Real LLM providers, vector memory, dataset evaluation | ⏳ later |
 | Public deployment | ⏳ next |
-| Real LLM providers, pgvector memory, SECOM evaluation, work orders | ⏳ later |
 
 ---
 
@@ -91,9 +94,21 @@ These will bite you if you skip them. They are all measured, not guessed.
 
 ### Run the API (offline demo)
 
+The agent's tools read a real database, so Postgres comes first. The whole stack — including
+the migration and the seed — is one command:
+
 ```powershell
-$env:UV_CACHE_DIR = "$PWD\.uv-cache"
+docker compose up -d --build     # UI on :8080, API docs on :8000/docs
+```
+
+Or run the API on the host against just the database:
+
+```powershell
+docker compose up -d postgres
+$env:LRC_DATABASE_URL = "postgresql+asyncpg://lrc:lrc@localhost:5432/lrc"
+$env:UV_CACHE_DIR     = "$PWD\.uv-cache"
 uv sync
+uv run python -m line_rca_api.db.bootstrap      # migrate, then seed if empty
 uv run uvicorn line_rca_api.main:app --reload --port 8000
 ```
 
@@ -112,6 +127,19 @@ curl -N -X POST http://127.0.0.1:8000/api/analyze `
 ```
 
 Interactive API docs: <http://127.0.0.1:8000/docs>
+
+### What the agent can actually do
+
+| Tool | Reads/writes |
+|---|---|
+| `query_defects` | defect rate and the per-station, per-type breakdown for a batch |
+| `query_telemetry` | latest equipment readings, each against its baseline, deviations flagged |
+| `find_similar_cases` | past work orders with a matching symptom or station |
+| `create_work_order` | **writes** a maintenance order, linked to the run that recommended it |
+| `list_work_orders` | recent orders, optionally filtered by status |
+
+`create_work_order` closes over the current run id, so `work_orders.run_id` points back at the
+reasoning that produced the recommendation — the decision stays auditable after the fact.
 
 ### Run the web UI
 
@@ -153,7 +181,9 @@ incremental rather than delivered in one burst at the end; both are verified —
 ### Tests, lint, types
 
 ```powershell
-# backend
+# backend — the API tests are integration tests and need a database
+docker compose up -d postgres
+$env:LRC_TEST_DATABASE_URL = "postgresql+asyncpg://lrc:lrc@localhost:5432/lrc"
 uv sync
 uv run pytest
 uv run ruff check .
@@ -167,6 +197,9 @@ npm run test
 npm run build
 npm run budget          # fails if a JS bundle exceeds 300 kB gzip
 ```
+
+Without `LRC_TEST_DATABASE_URL` the integration tests **skip with a stated reason** rather
+than passing silently. The kernel and tool-layer tests need no database at all.
 
 ---
 

@@ -24,5 +24,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // The default 5s assumes an idle machine. These tests routinely take under 200ms, but
+    // module import on a loaded Windows box (Docker Desktop plus a browser) has been
+    // measured at 60s+ for a cold run, which turns a healthy suite into a red one.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });

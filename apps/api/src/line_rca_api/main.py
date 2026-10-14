@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from line_rca_api.config import get_settings
-from line_rca_api.routers import analyze, health
+from line_rca_api.routers import analyze, health, line
 
 DESCRIPTION = """\
 Industrial production-line root-cause-analysis agent.
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health.router)
     app.include_router(analyze.router)
+    app.include_router(line.router)
     return app
 
 
