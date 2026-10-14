@@ -34,6 +34,7 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 | Evaluation — SECOM fault injection, calibrated baseline, CI regression gate | ✅ implemented + tested |
 | GitHub Actions CI | ✅ written — unverified until the repo exists on GitHub |
 | MQTT telemetry ingest (collector + simulator) | ✅ implemented + tested |
+| Real LLM providers (DeepSeek / any OpenAI-compatible endpoint / Ollama) | ✅ implemented + tested |
 | Real LLM providers, vector memory, dataset evaluation | ⏳ later |
 | Public deployment | ⏳ next |
 
@@ -207,6 +208,35 @@ uv run python -m line_rca_api.ingest.simulator     # simulated PLC -> broker
 
 The collector is a separate process rather than an API background task: in a plant it sits at
 the edge next to the equipment, and a broker outage should not take the API down with it.
+
+### Run it against a real model
+
+The default provider is a scripted `fake`, which is what makes the offline demo and CI
+possible. Switching to a real one is a configuration change, not a code change — the kernel
+never learns which provider it has:
+
+```powershell
+# DeepSeek: base URL and model have defaults
+$env:LRC_LLM_PROVIDER = "deepseek"
+$env:DEEPSEEK_API_KEY = "<key>"
+
+# Any OpenAI-shaped endpoint (vLLM, LM Studio, a gateway)
+$env:LRC_LLM_PROVIDER = "openai_compat"
+$env:LRC_LLM_BASE_URL = "https://your-endpoint/v1"
+$env:LRC_LLM_MODEL    = "your-model"
+$env:LRC_LLM_API_KEY  = "<key>"
+
+# Local inference needs no key
+$env:LRC_LLM_PROVIDER = "ollama"
+$env:LRC_LLM_MODEL    = "qwen3"
+```
+
+One adapter covers all three because they share a wire format; what differs is the base URL,
+the key and the model name. Two things it deliberately does **not** do: it does not retry (a
+rate limit surfaces as an error, because retry policy deserves its own tests rather than a
+quiet loop in the transport), and it does not repair malformed tool arguments (swallowing them
+into `{}` would make a tool blame the model for a parsing failure this layer hid — the raw
+text goes into the error instead).
 
 ### Tests, lint, types
 

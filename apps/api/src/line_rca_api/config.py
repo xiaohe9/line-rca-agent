@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_base_url: str = ""
     llm_timeout_seconds: float = 60.0
+    #: Generic key, for any OpenAI-compatible endpoint.
+    llm_api_key: str = ""
     # Deliberately unprefixed: it is a shared vendor credential, not an app knob.
     deepseek_api_key: str = Field(default="", validation_alias="DEEPSEEK_API_KEY")
 
@@ -52,6 +54,11 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def resolved_api_key(self) -> str:
+        """The generic key wins; the vendor-specific one is the fallback."""
+        return self.llm_api_key or self.deepseek_api_key
 
 
 @lru_cache

@@ -103,7 +103,11 @@ class MemoryItem:
 class LLMProvider(Protocol):
     """A chat model. `fake` is a first-class implementation, not a test hack."""
 
-    name: str
+    @property
+    def name(self) -> str:
+        """Read-only: a collaborator's name is something the kernel reports, not something
+        it sets. Implementations may satisfy this with a plain attribute."""
+        ...
 
     async def complete(
         self,

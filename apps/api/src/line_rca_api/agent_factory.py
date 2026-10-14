@@ -24,11 +24,34 @@ from line_rca_api.db.repositories import (
     SqlWorkOrderRepository,
 )
 from line_rca_api.demo import demo_script
+from line_rca_api.providers import OpenAiCompatProvider
 from line_rca_api.tools import register_line_tools
 
 
 class NotYetImplementedError(RuntimeError):
     """A configuration option that is planned but not wired up yet."""
+
+
+class ConfigurationError(RuntimeError):
+    """The selected provider cannot be built from the current settings."""
+
+
+#: Where each known provider lives by default. `openai_compat` has none on purpose: pointing
+#: at an arbitrary compatible endpoint requires saying which one.
+DEFAULT_BASE_URLS: dict[str, str] = {
+    "deepseek": "https://api.deepseek.com/v1",
+    "ollama": "http://localhost:11434/v1",
+    "openai_compat": "",
+}
+
+DEFAULT_MODELS: dict[str, str] = {
+    "deepseek": "deepseek-chat",
+    "ollama": "",
+    "openai_compat": "",
+}
+
+#: Local inference needs no credential.
+PROVIDERS_WITHOUT_KEYS = frozenset({"ollama"})
 
 
 def build_trace_sink(settings: Settings) -> TraceSink:
@@ -50,10 +73,29 @@ def build_provider(settings: Settings) -> LLMProvider:
     match settings.llm_provider:
         case "fake":
             return ScriptedProvider(demo_script())
+        case "deepseek" | "openai_compat" | "ollama" as provider:
+            base_url = settings.llm_base_url or DEFAULT_BASE_URLS[provider]
+            if not base_url:
+                raise ConfigurationError(f"LRC_LLM_BASE_URL is required for provider '{provider}'.")
+            model = settings.llm_model or DEFAULT_MODELS[provider]
+            if not model:
+                raise ConfigurationError(f"LRC_LLM_MODEL is required for provider '{provider}'.")
+            api_key = settings.resolved_api_key
+            if not api_key and provider not in PROVIDERS_WITHOUT_KEYS:
+                raise ConfigurationError(
+                    f"provider '{provider}' needs a key: set LRC_LLM_API_KEY or DEEPSEEK_API_KEY, "
+                    "or use LRC_LLM_PROVIDER=fake to run offline."
+                )
+            return OpenAiCompatProvider(
+                name=provider,
+                base_url=base_url,
+                model=model,
+                api_key=api_key,
+                timeout=settings.llm_timeout_seconds,
+            )
         case other:
-            raise NotYetImplementedError(
-                f"LLM provider '{other}' is not wired up yet (planned for M3). "
-                "Set LRC_LLM_PROVIDER=fake or LRC_DEMO_MODE=1 to run offline."
+            raise ConfigurationError(
+                f"unknown LLM provider '{other}'. Use fake, deepseek, openai_compat or ollama."
             )
 
 
