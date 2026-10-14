@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.13.1"
+  NODE_VERSION: "24"
+
+jobs:
+  api:
+    name: api · lint, format, types, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install (frozen lockfile)
+        run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Types
+        run: uv run mypy
+      - name: Tests
+        run: uv run pytest
+
+  kernel-contract:
+    # Its own job on purpose: the rule that the kernel never imports a framework is an
+    # architectural claim, and a failure here should read as a design break, not a test failure.
+    name: contract · kernel stays framework-free
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Kernel import-direction contract
+        run: uv run pytest packages/agent-core/tests/test_contracts.py -v
+
+  web:
+    name: web · types, lint, tests, build, budget
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install (frozen lockfile)
+        run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: Bundle budget
+        run: npm run budget
+
+  images:
+    name: images · both Dockerfiles build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  secrets:
+    name: hygiene · no secrets committed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  compose:
+    name: compose · configuration is valid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose.yml
+        run: docker compose config --quiet

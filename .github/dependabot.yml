@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # The Python workspace lockfile.
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      python-dev:
+        patterns: ["pytest*", "ruff", "mypy", "coverage*"]
+
+  # The npm workspace lockfile.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react*"]
+      tooling:
+        patterns: ["typescript", "vite", "@vitejs/*", "vitest", "eslint*", "tailwindcss", "@tailwindcss/*"]
+    ignore:
+      # ADR-0001: TypeScript 7 is the native-compiler rewrite and typescript-eslint caps at
+      # <6.1.0. Bump this by hand and re-run the M1 verification matrix.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(ci)"
+
+  - package-ecosystem: docker
+    directory: "/apps/api"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(docker)"
+
+  - package-ecosystem: docker
+    directory: "/apps/web"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(docker)"

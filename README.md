@@ -28,7 +28,9 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 | `packages/agent-core` — framework-free kernel (contracts, trace, planner, executor, memory, tools, fake provider) | ✅ implemented + tested (29 tests) |
 | `apps/api` — FastAPI adapter, SSE streaming, config | ✅ implemented + tested |
 | `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested (26 tests) |
-| Docker / CI / deployment | ⏳ next |
+| Docker images + compose stack | ✅ built + verified end to end |
+| GitHub Actions CI | ✅ written — unverified until the repo exists on GitHub |
+| Public deployment | ⏳ next |
 | Real LLM providers, pgvector memory, SECOM evaluation, work orders | ⏳ later |
 
 ---
@@ -131,6 +133,23 @@ The UI streams a run and renders it as a timeline. Three things are worth trying
 * **导出报告** — export the whole run (goal, answer, every step, every tool result) as
   Markdown. It is generated from accumulated events, so it works offline and mid-run.
 
+### Run the whole stack with Docker
+
+```powershell
+docker compose up --build
+# UI        http://localhost:8080
+# API docs  http://localhost:8000/docs
+```
+
+Four services: `web` (unprivileged nginx), `api` (non-root uvicorn), `postgres` (pgvector) and
+`mosquitto`. The database and broker are provisioned for M2 and the API does not use them yet —
+they are there so the next milestone is one command away.
+
+nginx serves the bundle and reverse-proxies `/api` and `/health`, so the browser stays on one
+origin and the SSE stream needs no CORS handling. `proxy_buffering off` is what keeps the stream
+incremental rather than delivered in one burst at the end; both are verified — see
+[the M1 report](docs/02-M1兼容性验证报告.md) §13.
+
 ### Tests, lint, types
 
 ```powershell
@@ -146,6 +165,7 @@ npm run typecheck
 npm run lint
 npm run test
 npm run build
+npm run budget          # fails if a JS bundle exceeds 300 kB gzip
 ```
 
 ---

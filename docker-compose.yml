@@ -1,0 +1,79 @@
+# One command brings up the whole product locally:
+#
+#     docker compose up --build
+#     open http://localhost:8080
+#
+# It runs with no API key and no network: the API defaults to the scripted `fake` provider
+# over a *simulated* dataset, so the full streaming trace works out of the box.
+
+name: line-rca-agent
+
+services:
+  # ---------------------------------------------------------------------------
+  #  Provisioned for M2 (episodic memory + case store, via pgvector).
+  #  The API does not open a connection to it yet — it is here so the environment
+  #  the next milestone needs is one command away, not a separate setup task.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: lrc
+      POSTGRES_PASSWORD: lrc
+      POSTGRES_DB: lrc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lrc -d lrc"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # M2: the simulated production-line telemetry publisher connects here.
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "1883:1883"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        UV_VERSION: ${UV_VERSION:-0.13.1}
+    environment:
+      LRC_ENV: dev
+      LRC_DEMO_MODE: "1"
+      LRC_LLM_PROVIDER: fake
+      LRC_TRACE_SINK: stdout
+      LRC_DATABASE_URL: postgresql+asyncpg://lrc:lrc@postgres:5432/lrc
+      LRC_MQTT_URL: mqtt://mosquitto:1883
+      LRC_CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+    environment:
+      # nginx proxies /api and /health here, so the browser needs no CORS at all.
+      API_UPSTREAM: http://api:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

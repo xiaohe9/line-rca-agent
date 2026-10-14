@@ -15,6 +15,7 @@
     "typecheck": "npm run typecheck --workspace @line-rca/web",
     "lint": "npm run lint --workspace @line-rca/web",
     "test": "npm run test --workspace @line-rca/web",
+    "budget": "node scripts/check-bundle-size.mjs",
     "api": "uv run uvicorn line_rca_api.main:app --reload --port 8000"
   }
 }

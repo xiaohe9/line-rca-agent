@@ -1,0 +1,33 @@
+# Keep the build context small and free of anything private or machine-specific.
+**/node_modules
+**/dist
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+.venv
+venv
+.git
+.gitattributes
+.github
+
+# Local caches that exist inside the repo only because the sandbox demands it.
+.npm-cache
+.uv-cache
+.pip-cache
+.pnpm-store
+.tmp
+
+# Throwaway experiments, probe scripts and private material.
+_spike
+_tools
+
+# Data is fetched by script, never baked into an image.
+eval/datasets
+
+# Secrets.
+.env
+.env.*
+!.env.example
+*.pem
