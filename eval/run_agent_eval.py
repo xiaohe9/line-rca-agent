@@ -66,6 +66,11 @@ def main(argv: list[str] | None = None) -> int:
         default=8,
         help="agent steps per case; the first run used 4 and the agent ran out before reporting",
     )
+    parser.add_argument(
+        "--no-null-tool",
+        action="store_true",
+        help="remove the calibration tool, reproducing the run that over-reported",
+    )
     parser.add_argument("--dataset", type=Path, default=secom.DEFAULT_DIRECTORY)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
@@ -127,6 +132,10 @@ def main(argv: list[str] | None = None) -> int:
             provider,
             sensors_per_group=args.sensors_per_group,
             max_steps=args.max_steps,
+            null_tool=not args.no_null_tool,
+            # The calibration tool samples the line's healthy history, so the agent gets the
+            # real null rather than a resampled one that cannot see period-to-period movement.
+            null_pool=None if args.no_null_tool else pool,
         )
         print(f"\nrunning {agent.name} over {len(cases)} cases (max {args.max_steps} steps)...")
 

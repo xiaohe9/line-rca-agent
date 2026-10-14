@@ -1,0 +1,376 @@
+{
+  "cases": 25,
+  "controls": 25,
+  "seed": 20261014,
+  "sensorsPerGroup": 8,
+  "referenceRows": 200,
+  "windowRows": 60,
+  "baseline": {
+    "diagnoser": "deviation-baseline",
+    "threshold": 45.0,
+    "metrics": {
+      "cases": 25,
+      "detected": 7,
+      "top1": 4,
+      "top3": 5,
+      "controls": 25,
+      "false_positives": 2,
+      "blind_spot_cases": 7,
+      "blind_spot_detected": 1,
+      "detectionRate": 0.28,
+      "top1Rate": 0.16,
+      "top3Rate": 0.2,
+      "falsePositiveRate": 0.08,
+      "blindSpotRate": 0.1429
+    },
+    "perKind": {
+      "spike": {
+        "cases": 8,
+        "detected": 2,
+        "top1": 0,
+        "detectionRate": 0.25,
+        "top1Rate": 0.0
+      },
+      "drift": {
+        "cases": 3,
+        "detected": 0,
+        "top1": 0,
+        "detectionRate": 0.0,
+        "top1Rate": 0.0
+      },
+      "dead": {
+        "cases": 4,
+        "detected": 4,
+        "top1": 4,
+        "detectionRate": 1.0,
+        "top1Rate": 1.0
+      },
+      "decorrelate": {
+        "cases": 7,
+        "detected": 1,
+        "top1": 0,
+        "detectionRate": 0.1429,
+        "top1Rate": 0.0
+      },
+      "step": {
+        "cases": 3,
+        "detected": 0,
+        "top1": 0,
+        "detectionRate": 0.0,
+        "top1Rate": 0.0
+      }
+    }
+  },
+  "agent": {
+    "diagnoser": "agent-deepseek",
+    "model": "deepseek-chat",
+    "maxSteps": 16,
+    "elapsedSeconds": 1574.6,
+    "failures": 3,
+    "stepLimitHits": 3,
+    "metrics": {
+      "cases": 25,
+      "detected": 5,
+      "top1": 3,
+      "top3": 3,
+      "controls": 25,
+      "false_positives": 1,
+      "blind_spot_cases": 7,
+      "blind_spot_detected": 1,
+      "detectionRate": 0.2,
+      "top1Rate": 0.12,
+      "top3Rate": 0.12,
+      "falsePositiveRate": 0.04,
+      "blindSpotRate": 0.1429
+    },
+    "perKind": {
+      "spike": {
+        "cases": 8,
+        "detected": 1,
+        "top1": 0,
+        "detectionRate": 0.125,
+        "top1Rate": 0.0
+      },
+      "drift": {
+        "cases": 3,
+        "detected": 1,
+        "top1": 1,
+        "detectionRate": 0.3333,
+        "top1Rate": 0.3333
+      },
+      "dead": {
+        "cases": 4,
+        "detected": 1,
+        "top1": 1,
+        "detectionRate": 0.25,
+        "top1Rate": 0.25
+      },
+      "decorrelate": {
+        "cases": 7,
+        "detected": 1,
+        "top1": 0,
+        "detectionRate": 0.1429,
+        "top1Rate": 0.0
+      },
+      "step": {
+        "cases": 3,
+        "detected": 1,
+        "top1": 1,
+        "detectionRate": 0.3333,
+        "top1Rate": 0.3333
+      }
+    },
+    "samples": [
+      {
+        "kind": "spike",
+        "truthGroup": 30,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) are: shift_se 95%~10.1-11.6 (max 12.1), spread 95%~9.64 (max 9.64), outliers 95%~4.05 (max 5), correlation_change 95%~1.26 (max 1.29). The most extreme values in the table all fall inside these envelopes: max shift_se is 8.50 (sensor 37), max spread is 9.20 (sensor 204, a huge-ref_sd artifact the null itself produces), max outliers is 4 (sensor 223), and "
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 28,
+        "reported": [],
+        "reasoning": "Calibration against this case's own healthy reference shows the largest-of-313 null ceilings are: spread ~9.6, shift_se ~11.7, outliers 5, correlation_change ~1.29. Every individual candidate falls at or below these ceilings: sensor 37 shift_se 11.56 (< 11.7), sensor 46 spread 8.75, 129 9.09, 204 9.58 (< 9.6), and the 4-5 outlier sensors (24,25,26,29,137,212,305) are within the null range. The onl"
+      },
+      {
+        "kind": "drift",
+        "truthGroup": 18,
+        "reported": [
+          18
+        ],
+        "reasoning": "Sensor 148 (group 18) has shift_se = 16.89, which exceeds the largest-of-313 null maximum of 11.74 from the healthy resample — no healthy window produced a shift this large, so it is not explainable as the largest of many sensors. Its level rose from ref_med 0.0149 to win_med 0.0365 (more than doubled), with win_sd 0.0138 vs ref_sd 0.0069 and one outlier. Other large shift_se values (21=9.83, 303="
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 16,
+        "reported": [
+          16
+        ],
+        "reasoning": "Sensor 135 is the only sensor on the line whose statistic clears its calibrated null. Its spread is 20.72, versus a largest-of-313 null max of 9.643 (95% = 9.642) — more than double what chance produces across 313 sensors. The mechanism is a collapsed spread: in the reference window it varied (ref_sd 0.0322), but in the investigation window it is perfectly constant (win_sd 0.0000, win_min = win_ma"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 7,
+        "reported": [],
+        "reasoning": "Calibrated nulls (largest of 313) give 95% thresholds of ~10.12 for shift_se, ~9.64 for spread, ~4.05 for outliers, and ~1.264 for correlation_change. Every candidate falls inside these ranges: the largest shift_se is 8.94 (sensor 71), the largest spread is 9.64 (sensor 204, essentially the null max), the largest outlier count is 5 (sensors 24/25/26, within the null max of 5), and the largest corr"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 35,
+        "reported": [
+          31
+        ],
+        "reasoning": "Sensor 249 (group 31) shows the single largest peer-correlation change in the table (1.287), and it is a sign reversal: correlation with its 7 group peers goes from +0.801 in the reference window to -0.487 in the investigation window. Calibration shows the largest-of-313 null for correlation_change tops out around 1.26-1.30, so 1.287 is at the extreme edge and, crucially, it is a sign flip rather "
+      },
+      {
+        "kind": "drift",
+        "truthGroup": 18,
+        "reported": [],
+        "reasoning": "Calibrated all four statistics against this case's own healthy reference. Largest-of-313 null thresholds (90th pct): shift_se 9.87, spread 9.64, outliers 4, correlation_change 1.246. The most extreme observed values are shift_se 10.15 (sensor 150, only marginally above the 95th pct and below the null max 11.74), spread 8.99 (sensor 204), outliers 4 (sensor 223), and correlation_change 1.022 (senso"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 35,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) were: shift_se 95%~10.12 (max 11.74), spread 95%~9.64, outliers 95%~4.05 (max 5), correlation_change 95%~1.264 (max 1.287). No sensor exceeds these on any statistic. Largest shift_se is 8.50 (s229), largest spread 8.91 (s204), max outliers 4 (s223), and the largest peer-correlation change is 1.024 (s197, ref +0.860 -> win -0.163), all inside the null enve"
+      },
+      {
+        "kind": "step",
+        "truthGroup": 7,
+        "reported": [
+          7
+        ],
+        "reasoning": "Sensor 61 (group 7) has shift_se = 19.89, which exceeds the calibrated largest-of-313 null envelope for shift_se (95% ≈ 10.12, max 11.74) — no other sensor's shift_se even reaches the 95% envelope (next largest is 71 at 7.16). Its level moved from ref_med 1820.8 to win_med 1987.1 with win_sd inflated from 45.3 to 119.9. Its peer-correlation change is only 0.152, well inside the null (95% ≈ 1.26), "
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 22,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) are: shift_se 95%≈10.1, spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.26. The most extreme observed values all fall at or below these envelopes: max shift_se is 7.26 (s39), well under 10.1; max outliers is 1, far under 4; the largest correlation_change is s249 at 1.225 (ref +0.852 → win −0.372), still inside the 1.26 envelope, and s124 at 1"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 29,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 35,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) are: shift_se 95%≈10.12 (max 11.74), spread 95%≈9.64 (max 9.64), outliers 95%≈4.05 (max 5), correlation_change 95%≈1.26 (max 1.29). No sensor clears any of these. Largest shift_se is 7.45 (s71), below 10.12. Largest spread is 9.64 (s204), exactly at the largest-of-313 95% value. Max outlier count is 1, far below 4.05. The largest peer-correlation change i"
+      },
+      {
+        "kind": "drift",
+        "truthGroup": 31,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes for the largest of 313 sensors: shift_se 95%~10.1, spread 95%~9.64, outliers 95%~4.05, correlation_change 95%~1.26. The most extreme observed values all fall inside these envelopes: max shift_se = 7.61 (sensor 229), max spread = 9.01 (sensor 204), max outliers = 4 (sensor 223), max correlation_change = 1.038 (sensor 197). No sensor clears its calibrated threshold on any s"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 32,
+        "reported": [],
+        "reasoning": "Calibrated against this case's own healthy reference, no sensor clears the \"largest of 313\" null. shift_se: top candidate sensor 21 = 10.12, below the largest-of-313 95th percentile (11.59) and near its median (9.07); 155=7.20, 303=7.17, 71=7.04, 229=6.85 all below the 90th percentile (10.09). spread: max observed 9.24 (sensor 204) sits at the largest-of-313 median (~9.24), not anomalous. outliers"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 20,
+        "reported": [
+          31
+        ],
+        "reasoning": "Sensor 249 (group 31) is the only sensor whose statistic clears its calibrated null bar. Its peer correlation with the mean of its 7 group peers collapses from +0.800 in the reference window to -0.504 in the investigation window, a change of 1.304. The calibrated null for correlation_change across 313 sensors tops out at 1.287 (99%) / 1.264 (95%), so this change exceeds what the healthy reference "
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 16,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) are: shift_se 95%≈10.12, spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.264. The most extreme observed values fall short of every one of these: max shift_se is 9.84 (sensor 21), max spread is 9.21 (sensor 204), max outliers is 2 (sensors 90, 239), and max correlation_change is 1.201 (sensor 128). Sensor 128's peer correlation drop (ref +0.92"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 6,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes for the largest of 313 sensors: shift_se 95%≈10.12 (max 11.74), spread 95%≈9.64 (max 9.64), outliers 95%≈4.05 (max 5), correlation_change 95%≈1.26 (max 1.29). No sensor exceeds these. Largest shift_se is sensor 71 at 9.06 (<10.12). Largest spread is sensor 204 at 9.64 (equals, does not exceed, the null max). Largest outlier count is 4 (sensor 49), within the null envelope"
+      },
+      {
+        "kind": "step",
+        "truthGroup": 12,
+        "reported": [],
+        "reasoning": "Calibrated nulls (largest of 313) show: shift_se reaches ~8.7 median / 11.7 max; spread saturates ~9.2-9.6; outliers reach 4-5; correlation_change reaches ~1.09 median / 1.29 max. No sensor exceeds these envelopes. The largest spread values (204=9.22, 129=8.68, 46=8.30) are inside the spread null. Max outliers observed is 2 (sensors 90, 239, 292), below the null's 4-5. The largest correlation_chan"
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 27,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) are: shift_se 95% ~10.1 (max ~12.1), spread 95% ~9.64, outliers 95% ~4.05, correlation_change 95% ~1.26 (max ~1.29). No sensor exceeds these. Largest shift_se is 9.85 (s21), below the 10.1 envelope; largest outlier count is 2 (s67/s223/s239), far below 4.05; largest correlation_change is 1.047 (s131), below the 1.26 envelope. The only spread above envelop"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 34,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes for the largest of 313 sensors: shift_se 95% ~10.1-11.6 (max ~12.1), spread 95% ~9.64, outliers 95% ~4.05 (max 5), correlation_change 95% ~1.26 (max ~1.29). Every sensor's statistics fall inside these envelopes: the largest shift_se is 7.97 (sensor 229), largest spread 8.99 (sensor 204), max outliers 4 (sensor 223), and the largest peer-correlation change is 1.035 (sensor"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 6,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 32,
+        "reported": [],
+        "reasoning": "Calibrated against this case's own healthy reference (largest-of-313 row): correlation_change 95%≈1.263, shift_se 95%≈11.591, spread 95%≈9.641, outliers 95%=5. No sensor exceeds these. The largest peer-correlation change is sensor 124 at 1.073, below the 95% null threshold of 1.263 — the apparent clusters (121-131, 196-206) are mass co-movement the null predicts. Largest shift_se is sensor 71 at 9"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 0,
+        "reported": [],
+        "reasoning": "Calibrated null distributions (largest-of-313 row) set the bar for a real anomaly: shift_se 95%≈10.12 (max 11.74), spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.264 (max 1.287). The most extreme observed values all fall below these bars: largest shift_se = 9.53 (sensor 21), largest spread = 9.03 (sensor 204), largest outlier count = 4 (sensor 223), largest correlation_change = 1.053"
+      },
+      {
+        "kind": "step",
+        "truthGroup": 14,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313): shift_se 95%=11.59/max=12.14; spread 95%=9.64/max=9.64; outliers 95%=5/max=5; correlation_change 95%=1.263/max=1.287. The most extreme observed values across all 313 sensors fall inside these envelopes: max shift_se is 8.73 (sensor 37), below the 90% largest-of value of 10.09; max spread is 9.07 (sensor 204), below 9.64 and driven by a degenerate referen"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 38,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes for the largest of 313 sensors: shift_se 95%≈10.1 (max observed 7.69, sensor 229), spread 95%≈9.64 (max observed ~3.12, sensor 249), outliers 95%≈4.05 (max observed 3, sensors 89/164/238), correlation_change 95%≈1.26 (max observed 0.762, sensor 26). Every candidate statistic falls below its calibrated envelope, so none is distinguishable from the largest value expected by"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) were: shift_se 95%≈10.12, spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.264. The most extreme observed values all fall inside these envelopes: max shift_se 9.84 (s21), max spread 9.34 (s204), max outliers 2 (s239), max correlation_change 1.124 (s131). No sensor's level shift, spread change, outlier run, or peer-correlation change exceeds wh"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated nulls (largest of 313, 500 iterations) set the bar at: shift_se 95%=11.59 (median 8.94), spread 95%=9.64, outliers 95%=5, correlation_change 95%=1.26. The most extreme values actually present are: shift_se max 8.02 (sensor 229), spread max 8.88 (sensor 204), outliers max 4 (sensor 223), correlation_change max 1.04 (sensor 197). Every one of these falls below the corresponding largest-of"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated all four statistics against this case's own healthy reference. Null \"largest of 313\" medians: shift_se 8.72, spread 9.23, outliers 2, correlation_change 1.091. Largest observed values: shift_se 9.83 (sensor 21), spread 9.34 (sensor 204), outliers 2 (sensor 239), correlation_change 1.129 (sensor 131). Every one sits at or below the median of the largest-of-313 null, i.e. entirely consist"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated nulls (largest of 313, 95%): shift_se ~11.6, spread ~9.64, outliers 5, correlation_change ~1.26. The most extreme observed values are: shift_se max 9.83 (sensor 21), spread max 9.34 (sensor 204), outliers max 2 (sensor 239), correlation_change max 1.129 (sensor 131). Every one of these falls below its calibrated largest-of-313 threshold, meaning values this large arise by chance when no"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313): shift_se 95%≈10.12, spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.264. No sensor exceeds these. Largest shift_se is 9.82 (sensor 21), below 10.12. Largest spreads (204=9.33, 129=8.81, 46=8.26) are below 9.64 and are artifacts of inflated reference SDs (ref_sd 355/705/448). Max outliers is 2, below 4.05. Largest correlation change is sensor"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes for the largest of 313 sensors: shift_se 95%≈10.1, spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.26. The most extreme observed values all fall short: max shift_se 7.91 (s71), max spread 9.37 (s204), max outliers 2 (s90/s239/s266), max correlation_change 1.012 (s206). No sensor exceeds its calibrated envelope on any statistic, and no sensor is extreme on mor"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest-of-313 row) are: shift_se 95%≈11.6 (max 12.1), spread 95%≈9.64 (max 9.64), outliers 95%=5, correlation_change 95%≈1.26 (max 1.30). The most extreme observed values are: shift_se max 9.93 (s21), spread max 9.37 (s204), outliers max 2 (s90, s239), correlation_change max 1.041 (s206). Every one of these falls inside the null envelope for the largest of 313 sensors, "
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) show: shift_se 95%≈10.12 (max observed 8.08, sensor 71); spread 95%≈9.64 (max observed 9.24, sensor 204); outliers 95%≈4.05 (max observed 2, sensors 90/239); correlation_change 95%≈1.264 (max observed 1.013, sensor 249). Every statistic's largest observed value falls below its largest-of-313 null envelope — in the case of correlation_change, the maximum o"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes for the largest of 313 sensors: shift_se 95%≈10.12, spread 95%≈9.64, outliers 95%≈4.05, correlation_change 95%≈1.264. No sensor exceeds any of these. Largest shift_se is 9.60 (sensor 21), largest spread is 9.09 (sensor 204, driven by an inflated reference sd of 355), max outliers is 4 (sensor 223), and the largest peer-correlation change is 1.114 (sensor 203, confirmed in"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest-of-313) are: shift_se 95%~10.1-11.6 (max 12.1), spread 95%~9.64 (max 9.64), outliers 95%~4.05 (max 5), correlation_change 95%~1.26 (max 1.29). No sensor clears any of these: the largest shift_se is 8.50 (s229), largest spread is 8.91 (s204), largest outlier count is 4 (s223), and the largest peer-correlation change is 1.024 (s197) — all below the corresponding la"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated null envelopes (largest of 313) were: shift_se 95%~11.6/max 12.1; spread 95%~9.6/max 9.6; outliers 95%~5/max 5; correlation_change 95%~1.26/max 1.29. The most extreme observed values all fall inside these envelopes: max shift_se 8.71 (s37), max spread 9.06 (s204), max outliers 4 (s223), max correlation_change 1.101 (s203, confirmed by detailed peer correlation: ref +0.939 -> win -0.162)"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated all four statistics against this case's own healthy reference. Largest-of-313 null bars: shift_se 95%~10.1 (max 12.1), spread 95%~9.64, outliers 95%~4.05 (max 5), correlation_change 95%~1.26 (max 1.29). Every candidate falls below these bars: the largest shift_se in the table is 9.50 (sensor 21), below even the 90% bar; the largest spread is 8.98 (sensor 204), below the 9.64 bar; the la"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "Calibrated the null for shift_se, spread, and outliers on this case's own healthy reference. The largest shift_se in the table is sensor 21 at 9.63, below the 90th percentile (9.87) of the 'largest of 313' null; sensor 17 (8.26) is below even the median (8.72). Largest spread is sensor 204 at 8.85, below the largest-of-313 median of 9.23. Largest outlier count is 3 (sensors 89, 164, 238), below th"
+      }
+    ]
+  }
+}

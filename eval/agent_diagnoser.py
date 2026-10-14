@@ -40,7 +40,13 @@ REPORT_TOOL = "report_root_cause"
 NO_FAULT_TOOL = "report_no_fault"
 CORRELATION_TOOL = "peer_correlation"
 CORRELATION_TABLE_TOOL = "peer_correlation_table"
+NULL_TOOL = "calibrate_null"
 EPSILON = 1e-9
+#: Bootstrap iterations allowed per calibration call. The tool runs inside a step the agent is
+#: waiting on, so it has to stay fast.
+DEFAULT_NULL_ITERATIONS = 200
+MAX_NULL_ITERATIONS = 500
+NULL_SEED = 20261014
 
 
 def _correlation_of(left: np.ndarray, right: np.ndarray) -> float:
@@ -49,6 +55,99 @@ def _correlation_of(left: np.ndarray, right: np.ndarray) -> float:
         return 0.0
     value = float(np.corrcoef(left, right)[0, 1])
     return 0.0 if np.isnan(value) else value
+
+
+# --------------------------------------------------------------------------- #
+#  The statistics, exposed one by one so the agent can calibrate them itself.
+# --------------------------------------------------------------------------- #
+
+
+def shift_statistic(reference: np.ndarray, window: np.ndarray) -> np.ndarray:
+    """Median shift per sensor, in units of the standard error of that shift."""
+    n_reference = reference.shape[0]
+    n_window = window.shape[0]
+    standard_error = (
+        1.2533 * np.std(reference, axis=0) * float(np.sqrt(1.0 / n_window + 1.0 / n_reference))
+    )
+    shifted = np.abs(np.median(window, axis=0) - np.median(reference, axis=0))
+    return np.asarray(shifted / np.maximum(standard_error, EPSILON), dtype=np.float64)
+
+
+def spread_statistic(reference: np.ndarray, window: np.ndarray) -> np.ndarray:
+    """Absolute log ratio of the two standard deviations."""
+    return np.abs(
+        np.log(
+            np.maximum(np.std(window, axis=0), EPSILON)
+            / np.maximum(np.std(reference, axis=0), EPSILON)
+        )
+    )
+
+
+def outlier_statistic(reference: np.ndarray, window: np.ndarray) -> np.ndarray:
+    """Window points more than eight reference deviations from the reference median."""
+    median = np.median(reference, axis=0)
+    spread = np.std(reference, axis=0)
+    counts = np.sum(np.abs(window - median) > 8.0 * np.maximum(spread, EPSILON), axis=0)
+    return counts.astype(np.float64)
+
+
+def correlation_statistic(
+    reference: np.ndarray, window: np.ndarray, sensors_per_group: int
+) -> np.ndarray:
+    """How far each sensor's correlation with its group peers moved between the two windows.
+
+    Vectorised rather than looping over `corrcoef` per sensor, because this is called once per
+    bootstrap iteration: at 313 sensors and a few hundred iterations the per-sensor version is
+    tens of thousands of calls, and a tool the agent waits on has to be fast.
+    """
+    moved = _correlation_with_peers(reference, sensors_per_group) - _correlation_with_peers(
+        window, sensors_per_group
+    )
+    return np.asarray(np.abs(moved), dtype=np.float64)
+
+
+def _correlation_with_peers(matrix: np.ndarray, sensors_per_group: int) -> np.ndarray:
+    n_sensors = matrix.shape[1]
+    result = np.zeros(n_sensors, dtype=np.float64)
+    for start in range(0, n_sensors, sensors_per_group):
+        stop = min(start + sensors_per_group, n_sensors)
+        block = matrix[:, start:stop]
+        size = stop - start
+        if size < 2:
+            continue
+        peers = (block.sum(axis=1, keepdims=True) - block) / (size - 1)
+        centred_block = block - block.mean(axis=0)
+        centred_peers = peers - peers.mean(axis=0)
+        numerator = (centred_block * centred_peers).sum(axis=0)
+        denominator = np.sqrt((centred_block**2).sum(axis=0) * (centred_peers**2).sum(axis=0))
+        with np.errstate(invalid="ignore", divide="ignore"):
+            result[start:stop] = np.where(denominator > 0, numerator / denominator, 0.0)
+    return result
+
+
+STATISTICS = {
+    "shift_se": shift_statistic,
+    "spread": spread_statistic,
+    "outliers": outlier_statistic,
+    "correlation_change": correlation_statistic,
+}
+
+
+def _compute_statistic(
+    statistic: str, reference: np.ndarray, window: np.ndarray, sensors_per_group: int
+) -> np.ndarray:
+    """Dispatch explicitly: the four take different arguments, so one generic call will not type."""
+    match statistic:
+        case "shift_se":
+            return shift_statistic(reference, window)
+        case "spread":
+            return spread_statistic(reference, window)
+        case "outliers":
+            return outlier_statistic(reference, window)
+        case "correlation_change":
+            return correlation_statistic(reference, window, sensors_per_group)
+        case other:
+            raise ValueError(f"unknown statistic {other!r}")
 
 
 def sensor_table(case: Case) -> str:
@@ -105,7 +204,7 @@ def sensor_table(case: Case) -> str:
     return "\n".join(rows)
 
 
-def build_prompt(case: Case) -> str:
+def build_prompt(case: Case, *, null_tool: bool = True) -> str:
     n_sensors = case.reference.shape[1]
     per_group = case.sensors_per_group
     n_groups = group_of(n_sensors - 1, per_group) + 1
@@ -129,7 +228,15 @@ def build_prompt(case: Case) -> str:
         "spread, a run of outliers, or a changed relationship to the other sensors in its "
         f"group — call `{CORRELATION_TABLE_TOOL}` for that one, since it never shows up in the "
         f"columns above; `{CORRELATION_TOOL}` gives a single sensor in more detail.\n\n"
-        f"Finish by calling exactly one of `{REPORT_TOOL}` or `{NO_FAULT_TOOL}`. Some windows "
+        + (
+            f"Before you report, calibrate. Call `{NULL_TOOL}` for every statistic you intend to "
+            "rely on: it resamples this case's own healthy reference to show how large that "
+            "statistic gets when nothing is wrong. That is the question the table cannot answer "
+            "and the reason a value can look damning while meaning nothing.\n\n"
+            if null_tool
+            else ""
+        )
+        + f"Finish by calling exactly one of `{REPORT_TOOL}` or `{NO_FAULT_TOOL}`. Some windows "
         "contain a fault and some do not; report one only when the evidence supports it, and "
         "say so plainly when it does not."
     )
@@ -144,11 +251,18 @@ class AgentDiagnoser:
         *,
         sensors_per_group: int,
         max_steps: int = 8,
+        null_tool: bool = True,
+        null_pool: np.ndarray | None = None,
         name: str | None = None,
     ) -> None:
         self._provider = provider
         self._sensors_per_group = sensors_per_group
         self._max_steps = max_steps
+        self._null_tool = null_tool
+        #: Healthy history the calibration tool samples from. Without it the tool falls back to
+        #: resampling the case's own reference, which understates the null badly — see
+        #: `_null_table`.
+        self._null_pool = null_pool
         self._name = name or f"agent-{provider.name}"
         #: Cases where the provider or the kernel raised. Counted and reported rather than
         #: swallowed, because a run that silently scored failures as "no fault" would look
@@ -229,6 +343,83 @@ class AgentDiagnoser:
             )
         return "\n".join(rows)
 
+    def _null_table(self, case: Case, statistic: str, iterations: int) -> str:
+        """The calibration the agent cannot do in its head.
+
+        This answers the question that decides every false positive: **how large does this
+        statistic get when nothing is wrong?** With this many sensors the largest value is
+        usually large, and nothing in the table reveals that.
+
+        Where the null comes from matters, and the first version got it wrong. Resampling the
+        case's own reference rows assumes those rows are exchangeable, which put the 95th
+        percentile of the largest `shift_se` at 6.06 and of the largest `correlation_change` at
+        1.08. Sampling the line's real adjacent periods instead gives 10.12 and 1.26. Rows drawn
+        from a single period share that period's level, so the bootstrap cannot see the
+        period-to-period movement that is part of the real null — and it understates it in the
+        direction that matters, because a null that is too narrow makes the agent flag more, not
+        less. When healthy history is available the tool samples adjacent real periods from it;
+        the bootstrap survives only as a fallback, and the output always says which was used.
+        """
+        if statistic not in STATISTICS:
+            return f"unknown statistic '{statistic}'; choose one of {', '.join(STATISTICS)}"
+        iterations = max(20, min(int(iterations), MAX_NULL_ITERATIONS))
+
+        n_reference = case.reference.shape[0]
+        n_window = case.window.shape[0]
+        span = n_reference + n_window
+        rng = np.random.default_rng(NULL_SEED)
+
+        pool = self._null_pool
+        if pool is None or pool.shape[0] <= span:
+            pool = case.reference
+            source = f"this case's own {pool.shape[0]}-row reference, resampled by row"
+            use_adjacent = False
+        else:
+            source = f"the line's healthy history ({pool.shape[0]} rows)"
+            use_adjacent = True
+
+        max_start = max(1, pool.shape[0] - span)
+        values: list[np.ndarray] = []
+        peaks: list[float] = []
+        for _ in range(iterations):
+            if use_adjacent:
+                start = int(rng.integers(0, max_start + 1))
+                pseudo_reference = pool[start : start + n_reference]
+                pseudo_window = pool[start + n_reference : start + span]
+            else:
+                order = rng.permutation(pool.shape[0])
+                split = pool.shape[0] - n_window
+                pseudo_reference = pool[order[:split]]
+                pseudo_window = pool[order[split:]]
+            computed = _compute_statistic(
+                statistic, pseudo_reference, pseudo_window, self._sensors_per_group
+            )
+            values.append(computed)
+            peaks.append(float(computed.max()))
+
+        quantiles = (50, 90, 95, 99)
+        flat = np.concatenate(values)
+        single = np.quantile(flat, [q / 100 for q in quantiles])
+        largest = np.quantile(np.asarray(peaks), [q / 100 for q in quantiles])
+
+        lines = [
+            f"Null distribution of `{statistic}` from {iterations} healthy pairs drawn from "
+            f"{source}, each a {n_reference}-row reference against a {n_window}-row window:",
+            "",
+            f"{'':<18}{'50%':>9}{'90%':>9}{'95%':>9}{'99%':>9}{'max':>9}",
+            "  one sensor      "
+            + "".join(f"{value:>9.3f}" for value in single)
+            + f"{float(flat.max()):>9.3f}",
+            f"  largest of {pool.shape[1]:<4}"
+            + "".join(f"{value:>9.3f}" for value in largest)
+            + f"{float(np.max(peaks)):>9.3f}",
+            "",
+            "A single sensor can reach the 'one sensor' column and mean nothing, because this "
+            "line has many sensors. Judge a candidate against the 'largest of' row unless you "
+            "have an independent reason to believe that specific sensor.",
+        ]
+        return "\n".join(lines)
+
     def _tools(self, case: Case, captured: dict[str, Any]) -> list[Tool]:
         async def correlation_tool(arguments: dict[str, Any]) -> ToolResult:
             raw = arguments.get("sensor")
@@ -245,6 +436,12 @@ class AgentDiagnoser:
         async def correlation_table_tool(arguments: dict[str, Any]) -> ToolResult:
             return ToolResult(ok=True, content=self._correlation_table(case))
 
+        async def null_tool(arguments: dict[str, Any]) -> ToolResult:
+            statistic = str(arguments.get("statistic", "shift_se"))
+            raw = arguments.get("iterations", DEFAULT_NULL_ITERATIONS)
+            iterations = raw if isinstance(raw, int) else DEFAULT_NULL_ITERATIONS
+            return ToolResult(ok=True, content=self._null_table(case, statistic, iterations))
+
         async def report_tool(arguments: dict[str, Any]) -> ToolResult:
             captured[REPORT_TOOL] = arguments
             return ToolResult(ok=True, content="recorded")
@@ -253,7 +450,37 @@ class AgentDiagnoser:
             captured[NO_FAULT_TOOL] = arguments
             return ToolResult(ok=True, content="recorded")
 
-        return [
+        tools: list[Tool] = [
+            FunctionTool(
+                name=NULL_TOOL,
+                description=(
+                    "Calibrate a statistic against this case's own healthy data. Resamples the "
+                    "reference window into many pseudo-pairs and reports how large the statistic "
+                    "gets when nothing is wrong, separately for one sensor and for the largest "
+                    "of all sensors. Call this before reporting, for every statistic you intend "
+                    "to rely on: with this many sensors, the largest value is usually large."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "statistic": {
+                            "type": "string",
+                            "enum": sorted(STATISTICS),
+                            "description": "which statistic to calibrate",
+                        },
+                        "iterations": {
+                            "type": "integer",
+                            "description": (
+                                f"resamples to run, default {DEFAULT_NULL_ITERATIONS}, "
+                                f"max {MAX_NULL_ITERATIONS}"
+                            ),
+                        },
+                    },
+                    "required": ["statistic"],
+                    "additionalProperties": False,
+                },
+                handler=null_tool,
+            ),
             FunctionTool(
                 name=CORRELATION_TABLE_TOOL,
                 description=(
@@ -323,6 +550,9 @@ class AgentDiagnoser:
                 handler=no_fault_tool,
             ),
         ]
+        if not self._null_tool:
+            tools = [tool for tool in tools if tool.name != NULL_TOOL]
+        return tools
 
     def _record(self, case: Case, reasoning: str, candidates: tuple[int, ...]) -> None:
         self.answers.append(
@@ -374,7 +604,7 @@ class AgentDiagnoser:
         )
         try:
             exhausted = False
-            async for event in kernel.run(Goal(text=build_prompt(case))):
+            async for event in kernel.run(Goal(text=build_prompt(case, null_tool=self._null_tool))):
                 if event.type == "run.failed":
                     exhausted = True
                 # Reporting ends the investigation. A real deployment would have opened a work
