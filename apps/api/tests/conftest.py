@@ -8,11 +8,23 @@ passing.
 Database preparation shells out to `python -m line_rca_api.db.bootstrap --reset` — the same
 command production uses — instead of building the schema in-process. That avoids crossing
 event loops with asyncpg, and it means the tests exercise the real bootstrap path.
+
+**The suite is hermetic about the model.** `Settings` reads a `.env`, so a developer who has
+configured a real provider — which is exactly what you do before running the evaluation — would
+otherwise have the tests reach a paid API that needs a key and a network. Two tests failed this
+way the moment a `.env` appeared. Real environment variables outrank `.env` in pydantic-settings,
+so pinning the provider here is enough, and it has to happen before `line_rca_api.main` is
+imported because the app is built at import time.
 """
 
 from __future__ import annotations
 
 import os
+
+# Before any application import: these must win over the developer's .env.
+os.environ["LRC_LLM_PROVIDER"] = "fake"
+os.environ["LRC_DEMO_MODE"] = "1"
+
 import subprocess
 import sys
 from collections.abc import Iterator

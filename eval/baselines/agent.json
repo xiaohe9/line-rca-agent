@@ -1,0 +1,406 @@
+{
+  "cases": 25,
+  "controls": 25,
+  "seed": 20261014,
+  "sensorsPerGroup": 8,
+  "referenceRows": 200,
+  "windowRows": 60,
+  "baseline": {
+    "diagnoser": "deviation-baseline",
+    "threshold": 45.0,
+    "metrics": {
+      "cases": 25,
+      "detected": 7,
+      "top1": 4,
+      "top3": 5,
+      "controls": 25,
+      "false_positives": 2,
+      "blind_spot_cases": 7,
+      "blind_spot_detected": 1,
+      "detectionRate": 0.28,
+      "top1Rate": 0.16,
+      "top3Rate": 0.2,
+      "falsePositiveRate": 0.08,
+      "blindSpotRate": 0.1429
+    },
+    "perKind": {
+      "spike": {
+        "cases": 8,
+        "detected": 2,
+        "top1": 0,
+        "detectionRate": 0.25,
+        "top1Rate": 0.0
+      },
+      "drift": {
+        "cases": 3,
+        "detected": 0,
+        "top1": 0,
+        "detectionRate": 0.0,
+        "top1Rate": 0.0
+      },
+      "dead": {
+        "cases": 4,
+        "detected": 4,
+        "top1": 4,
+        "detectionRate": 1.0,
+        "top1Rate": 1.0
+      },
+      "decorrelate": {
+        "cases": 7,
+        "detected": 1,
+        "top1": 0,
+        "detectionRate": 0.1429,
+        "top1Rate": 0.0
+      },
+      "step": {
+        "cases": 3,
+        "detected": 0,
+        "top1": 0,
+        "detectionRate": 0.0,
+        "top1Rate": 0.0
+      }
+    }
+  },
+  "agent": {
+    "diagnoser": "agent-deepseek",
+    "model": "deepseek-chat",
+    "maxSteps": 16,
+    "elapsedSeconds": 1658.8,
+    "failures": 15,
+    "stepLimitHits": 15,
+    "metrics": {
+      "cases": 25,
+      "detected": 12,
+      "top1": 3,
+      "top3": 3,
+      "controls": 25,
+      "false_positives": 8,
+      "blind_spot_cases": 7,
+      "blind_spot_detected": 4,
+      "detectionRate": 0.48,
+      "top1Rate": 0.12,
+      "top3Rate": 0.12,
+      "falsePositiveRate": 0.32,
+      "blindSpotRate": 0.5714
+    },
+    "perKind": {
+      "spike": {
+        "cases": 8,
+        "detected": 3,
+        "top1": 0,
+        "detectionRate": 0.375,
+        "top1Rate": 0.0
+      },
+      "drift": {
+        "cases": 3,
+        "detected": 3,
+        "top1": 2,
+        "detectionRate": 1.0,
+        "top1Rate": 0.6667
+      },
+      "dead": {
+        "cases": 4,
+        "detected": 0,
+        "top1": 0,
+        "detectionRate": 0.0,
+        "top1Rate": 0.0
+      },
+      "decorrelate": {
+        "cases": 7,
+        "detected": 4,
+        "top1": 0,
+        "detectionRate": 0.5714,
+        "top1Rate": 0.0
+      },
+      "step": {
+        "cases": 3,
+        "detected": 2,
+        "top1": 1,
+        "detectionRate": 0.6667,
+        "top1Rate": 0.3333
+      }
+    },
+    "samples": [
+      {
+        "kind": "spike",
+        "truthGroup": 30,
+        "reported": [
+          16,
+          4,
+          19
+        ],
+        "reasoning": "Sensor 131 (group 16) shows the largest peer-correlation break in the table: correlation with its 7 peers falls from +0.981 (reference) to -0.104 (window), a change of 1.085, while its own level (shift_se 0.49) and spread (1.77) look unremarkable. This is the signature of a sensor that stopped tracking its neighbours, invisible in the summary columns. The break is echoed across group 16 (sensors 1"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 28,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "drift",
+        "truthGroup": 18,
+        "reported": [
+          18
+        ],
+        "reasoning": "Sensor 148 (group 18) shows the largest level shift in the field by a wide margin: shift_se = 16.89, versus 9.83 for the next candidate. Its window median (0.0365) is more than double its reference median (0.0149), with spread ratio 0.69 and one outlier. Its correlation with its 7 group peers also changed from -0.094 (reference) to +0.148 (window), a change of 0.243, indicating a changed relations"
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 16,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 7,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 35,
+        "reported": [],
+        "reasoning": "No single sensor shows a coherent fault signature. The largest level shifts (71: 7.21, 303: 6.60, 155: 6.58, 39: 6.38, 30: 6.07) are not accompanied by outliers, spread changes, or isolated peer-correlation breaks — sensor 71's correlation change (0.572) is on a very low-variance signal and is not corroborated by any other indicator. The largest peer-correlation changes (sensors 121-131, 196-206, "
+      },
+      {
+        "kind": "drift",
+        "truthGroup": 18,
+        "reported": [
+          18,
+          16,
+          25
+        ],
+        "reasoning": "Sensor 150 (group 18) has the largest shift_se of all 313 sensors (10.15), with window median 0.0063 vs reference median 0.0042 and the entire window range (0.0030-0.0108) sitting above the reference median — a clean level shift corroborated by the magnitude relative to ref_sd (0.0011). Spread is unchanged (0.44) and there are no outliers, ruling out noise/spike explanations. Its peer correlation "
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 35,
+        "reported": [],
+        "reasoning": "No single sensor shows the combination required for a single-sensor fault. The largest level shifts (155: 8.20, 229: 8.50, 303: 8.15, 297: 7.78) are scattered singletons, and the two I checked in detail (155, 229) show only modest peer-correlation changes (0.187, 0.212) — no broken relationship to their group peers. The largest spread values (46, 129, 204) are reference-window artifacts (huge ref_"
+      },
+      {
+        "kind": "step",
+        "truthGroup": 7,
+        "reported": [
+          7
+        ],
+        "reasoning": "Sensor 61 (group 7) shows the largest level shift in the table (shift_se 19.89; ref_med 1820.82 -> win_med 1987.11) combined with a near-doubled spread (ref_sd 45.33 -> win_sd 119.87, spread 0.97) and a window range (1733.55-2109.21) extending well beyond the reference envelope. Its peer correlation with group 7 peers stays positive (+0.033 -> +0.185), so it still tracks its neighbours — consisten"
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 22,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 29,
+        "reported": [
+          38,
+          16,
+          25
+        ],
+        "reasoning": "Sensor 307 (group 38) is the only sensor whose relationship to its peers clearly collapsed: peer correlation fell from +0.949 (reference) to +0.250 (window), change 0.699 — it stopped tracking its group, while its group-mate 305 also shifted (-0.428 to -0.811). Its own summary shows ref_sd 79.67 vs win_sd 63.61 with a window max of 282.47. By contrast, sensors 129, 204 and 46 show correlation INCR"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 35,
+        "reported": [
+          5
+        ],
+        "reasoning": "Sensor 46 (group 5) is the only sensor with an isolated, extreme anomaly. Its window SD is 814.54 vs reference SD 0.1301 (spread ratio 8.74, largest in the table) and its window max is 6363.66 against a reference median of 1.0331 — a single point ~49,000 reference deviations out — while its median is essentially unchanged (1.0331 -> 1.0564) and it records 1 outlier. Its peer correlation flips from"
+      },
+      {
+        "kind": "drift",
+        "truthGroup": 31,
+        "reported": [
+          24,
+          25,
+          16
+        ],
+        "reasoning": "Sensor 197 (group 24) shows the largest peer-correlation breakdown in the table: reference +0.888 vs window -0.149 (change 1.038), while its level/spread/outlier columns look normal (shift_se 0.27, spread 1.92, 0 outliers) — the classic 'stopped tracking its neighbours' fault that only the correlation view reveals. It is the extreme of a coherent block of sensors (121-131, 196-206, 247-249, 276-27"
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 32,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 20,
+        "reported": [
+          8
+        ],
+        "reasoning": "Sensor 71 (group 8) shows the largest level shift in the table (shift_se 7.36) and it is a genuine level shift, not an outlier: win_med -0.0088 vs ref_med -0.0058, with the entire window range (-0.0140 to -0.0026) below the reference median, and spread essentially unchanged (0.17). Its peer correlation with the mean of its 7 group peers inverted from -0.122 in the reference window to -0.678 in the"
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 16,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 6,
+        "reported": [],
+        "reasoning": "No single sensor is isolated as faulty. The extreme spread ratios (46: 8.75, 129: 9.16, 204: 9.64) are not unique — they occur in contiguous blocks (121-131, 196-206, 272-280) where every member shows the same inflated spread, the same window maxima in the tens-to-thousands, and the same peer-correlation jump from ~0.1-0.4 to ~0.84-0.99. That is a common-mode signature, not an isolated sensor faul"
+      },
+      {
+        "kind": "step",
+        "truthGroup": 12,
+        "reported": [
+          8
+        ],
+        "reasoning": "Sensor 71 (group 8) shows the largest level shift in the table (shift_se 7.16, ref_med -0.0058 -> win_med -0.0088) AND a large break in its relationship to its 7 group peers: peer correlation fell from -0.117 (reference) to -0.699 (window), a change of 0.582. Other high-shift candidates (155, 303, 30) keep tracking their peers (correlation changes 0.028, 0.128, 0.089), so their shifts are not acco"
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 27,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 34,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "decorrelate",
+        "truthGroup": 6,
+        "reported": [
+          16
+        ],
+        "reasoning": "Sensor 131 (group 16) shows the largest peer-correlation change in the entire table: reference +0.975 -> window -0.089 (change 1.065). In the reference window it tracked its 7 group peers almost perfectly; in the investigation window that relationship has collapsed to ~zero/negative. Its group peers (128, 129, 130) degrade only partially, so this is not a group-wide process shift but a single sens"
+      },
+      {
+        "kind": "dead",
+        "truthGroup": 32,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 0,
+        "reported": [
+          2
+        ],
+        "reasoning": "Sensor 21 (group 2) has the largest level shift of all 313 sensors (shift_se 9.53, win_med 4.58 vs ref_med 3.49) and, uniquely among the top-shift candidates, this shift is corroborated by an independent signature: its correlation with the mean of its 7 group peers collapsed from -0.134 in the reference window to -0.510 in the investigation window (change 0.377), i.e. it stopped tracking its neigh"
+      },
+      {
+        "kind": "step",
+        "truthGroup": 14,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "spike",
+        "truthGroup": 38,
+        "reported": [
+          37
+        ],
+        "reasoning": "Sensor 303 (group 37) shows the largest level shift in the table: shift_se 6.90, ref_med 0.8522 -> win_med 2.0578, while its spread is unchanged (spread 0.02; ref_sd 0.9474 vs win_sd 0.9714) and its peer correlation is essentially intact (ref -0.172 -> win -0.211, change 0.039). A sustained center shift with normal spread and normal peer tracking is the signature of a sensor bias/calibration fault"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "No single sensor shows an isolated anomaly. The largest level shifts (21: 9.83, 155: 7.65, 303: 7.64, 71: 7.53, 229: 7.08, 15: 6.82, 17: 6.72) form a broad cluster rather than one standout, and each has near-zero spread change and zero outliers. The two strongest candidates checked (21, 155) show no meaningful peer-correlation change (0.117, 0.074), and the large peer-correlation changes in the ta"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "No single sensor shows an isolated fault signature. The largest peer-correlation changes form a contiguous block (sensors ~121-131, 196-206, 247-253) whose reference correlations of 0.87-0.99 all collapse to near zero together in the investigation window — a group-wide decorrelation indicating a shared process/operating-point change, not one broken sensor. The top |shift_se| candidates (21: 9.83, "
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "No single sensor is anomalous by more than one criterion. The largest level shifts (155: 8.31, 229: 8.50, 303: 8.27) are not corroborated: individual peer-correlation checks on 229 (change 0.039) and 155 (change 0.069) show no change in relationship to group peers. The largest spread values (204: 8.85, 129: 8.27, 46: 8.11) are reference-window artifacts — huge reference SDs (355, 705, 448) against"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": "No single sensor behaves anomalously. The largest |shift_se| values (21: 9.82, 71: 7.53, 155: 7.42, 303: 7.43, 286: 5.10, 297: 5.43) all have window medians INSIDE ref_med ± 3*ref_sd, so they are artifacts of very tight reference SDs, not real level shifts. Sensor 21's peer correlation is weak and negative in both windows (-0.185 -> -0.316, change 0.132), no break. The large peer-correlation chang"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [
+          8
+        ],
+        "reasoning": "Sensor 71 has the largest level shift in the table (shift_se 8.08) and, uniquely among the top shift candidates, also shows a large break in its relationship to its group-8 peers: correlation with the peer mean fell from -0.136 (reference) to -0.682 (window), a change of 0.546. The other large-shift sensors (155, 303, 229) show only small peer-correlation changes (0.155, 0.158, 0.138) with near-ze"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [
+          25,
+          24,
+          4
+        ],
+        "reasoning": "Sensor 203 (group 25) shows the clearest fault signature: its correlation with the mean of its 7 group peers was +0.939 in the reference window but collapsed to -0.162 in the investigation window (change 1.101), the largest in the peer-correlation table. Neighbouring sensors in the same block show the same breakdown (206: +0.985 -> -0.026, change 1.011; 197: change 1.032; 200: 0.804; 202: 0.733; 2"
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [],
+        "reasoning": ""
+      },
+      {
+        "kind": "control",
+        "truthGroup": null,
+        "reported": [
+          2
+        ],
+        "reasoning": "Sensor 21 (group 2) shows the largest level shift in the entire table: shift_se = 9.63 (ref_med 3.4933 -> win_med 4.5941), with essentially unchanged spread (0.02) and zero outliers — the signature of a clean, isolated level shift rather than noise or a spread change. Its group peers 16-23 mostly did not shift (shifts 2.51, 1.13, 0.15, 0.94, 0.80, 1.10), so this is not a group-wide change; only se"
+      }
+    ]
+  }
+}

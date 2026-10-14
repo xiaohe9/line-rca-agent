@@ -49,6 +49,10 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Scratch scripts, probes and one-off verification harnesses live here. They are gitignored, so
+# CI never sees them, but a local `ruff check .` would — and a gate that fails locally while
+# passing in CI is worse than no gate at all, because it teaches you to ignore it.
+extend-exclude = ["_tools", "_spike"]
 src = [
     "apps/api/src",
     "apps/api/tests",

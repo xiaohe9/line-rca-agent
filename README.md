@@ -40,6 +40,7 @@ actually measured rather than asserted.
 | MQTT telemetry ingest (collector + simulator) | ✅ implemented + tested |
 | Real LLM providers (DeepSeek / any OpenAI-compatible endpoint / Ollama) | ✅ implemented + tested |
 | Evaluation — SECOM fault injection, calibrated baseline, CI regression gate | ✅ implemented + tested |
+| Agent-vs-baseline comparison on the same cases | ✅ measured — [report](docs/07-评测-Agent与基线对比.md) |
 | GitHub Actions CI | ✅ running on every push |
 | Public demo hosting | ⏳ needs a host account |
 | Vector/episodic memory | ⏳ later |

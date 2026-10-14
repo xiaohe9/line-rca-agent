@@ -19,15 +19,34 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 
 from eval import secom
-from eval.diagnoser import DeviationDiagnoser, calibrate_threshold
+from eval.diagnoser import DeviationDiagnoser, Diagnosis, calibrate_threshold
 from eval.injection import BASELINE_BLIND_SPOTS, Case, FaultKind, make_case
+
+
+class Diagnoser(Protocol):
+    """Anything the suite can score.
+
+    The harness used to be typed to `DeviationDiagnoser`, which quietly said "there is only one
+    way to diagnose". The agent-backed diagnoser is the second way, and it has no threshold at
+    all — so `threshold` is part of this protocol only so the report has something to print.
+    """
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def threshold(self) -> float: ...
+
+    def diagnose(self, case: Case) -> Diagnosis: ...
+
 
 DEFAULT_BASELINE = Path(__file__).resolve().parent / "baselines" / "baseline.json"
 #: A regression is a drop larger than this in a rate, or a rise larger than this in false
@@ -116,14 +135,19 @@ def build_cases(
 
 
 def run_suite(
-    cases: list[Case], diagnoser: DeviationDiagnoser
+    cases: list[Case],
+    diagnoser: Diagnoser,
+    *,
+    progress: Callable[[int, int, Case, Diagnosis], None] | None = None,
 ) -> tuple[Metrics, list[dict[str, Any]]]:
     detected = top1 = top3 = false_positives = 0
     blind_spot_cases = blind_spot_detected = 0
     detail: list[dict[str, Any]] = []
 
-    for case in cases:
+    for position, case in enumerate(cases, start=1):
         diagnosis = diagnoser.diagnose(case)
+        if progress is not None:
+            progress(position, len(cases), case, diagnosis)
         if case.is_control:
             if diagnosis.flagged:
                 false_positives += 1

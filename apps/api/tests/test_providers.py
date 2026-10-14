@@ -292,7 +292,26 @@ def test_the_constructor_refuses_an_unusable_endpoint(base_url: str, model: str)
 # --------------------------------------------------------------------------- #
 
 
-def test_fake_is_selected_by_default() -> None:
+def test_fake_is_the_class_default() -> None:
+    """`_env_file=None` on purpose.
+
+    Without it this asserts on whatever the developer's `.env` says, so the test fails on a
+    machine configured for the evaluation — which is the machine that most needs the suite to
+    pass. The subject is the class default, not the local configuration.
+    """
+    from line_rca_agent.providers import ScriptedProvider
+
+    assert isinstance(build_provider(Settings(_env_file=None)), ScriptedProvider)
+
+
+def test_the_suite_ignores_a_developers_dot_env() -> None:
+    """The guard for the conftest pin.
+
+    Adding a `.env` with a real provider broke two tests, because `Settings` reads it and the
+    API tests therefore tried to reach a paid model. `apps/api/tests/conftest.py` now pins
+    `LRC_LLM_PROVIDER` in the real environment, which outranks `.env`. This asserts that the pin
+    is still doing its job, so removing it fails here rather than on someone's machine.
+    """
     from line_rca_agent.providers import ScriptedProvider
 
     assert isinstance(build_provider(Settings()), ScriptedProvider)
