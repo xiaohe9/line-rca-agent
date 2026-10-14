@@ -1,5 +1,8 @@
 # line-rca-agent
 
+[![CI](https://github.com/xiaohe9/line-rca-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/xiaohe9/line-rca-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Production-line yield anomaly root-cause analysis agent.**
 
 Turns what the line already records — defect distributions, equipment telemetry, process
