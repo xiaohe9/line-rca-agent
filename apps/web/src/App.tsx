@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { AgentTrace } from "./features/agent-trace/AgentTrace";
 import { useRunStream } from "./features/agent-trace/useRunStream";
+import { BatchYield } from "./features/yield-overview/BatchYield";
+import { WorkOrderList } from "./features/workorders/WorkOrderList";
 import { fetchHealth } from "./shared/api/client";
 import type { Health } from "./shared/api/client";
 
@@ -20,6 +22,9 @@ export function App() {
   const [goal, setGoal] = useState(DEFAULT_GOAL);
   const [health, setHealth] = useState<Health | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  // Bumped when a run finishes so the panels that read the database pick up its side effect:
+  // a completed analysis may have opened a work order, and that should appear without a reload.
+  const [dataVersion, setDataVersion] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -32,6 +37,12 @@ export function App() {
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (stream.status === "done") {
+      setDataVersion((current) => current + 1);
+    }
+  }, [stream.status]);
 
   const streaming = stream.status === "streaming";
 
@@ -97,7 +108,10 @@ export function App() {
       </form>
 
       <main className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <AgentTrace events={stream.events} goal={stream.goal || goal} streaming={streaming} />
+        <div className="flex min-h-0 flex-col gap-3">
+          <BatchYield version={dataVersion} />
+          <AgentTrace events={stream.events} goal={stream.goal || goal} streaming={streaming} />
+        </div>
 
         <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto">
           <section
@@ -125,6 +139,8 @@ export function App() {
               <p className="break-all text-xs text-rose-200">{stream.error}</p>
             </section>
           )}
+
+          <WorkOrderList version={dataVersion} />
 
           <section className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
             <h2 className="mb-2 text-sm font-semibold text-slate-300">本次运行</h2>

@@ -15,12 +15,98 @@ export const healthSchema = z.object({
 
 export type Health = z.infer<typeof healthSchema>;
 
-export async function fetchHealth(signal?: AbortSignal): Promise<Health> {
-  const response = await fetch("/health", signal ? { signal } : {});
+export const batchSchema = z.object({
+  batchId: z.string(),
+  product: z.string(),
+  units: z.number(),
+  defects: z.number(),
+  defectRate: z.number(),
+  producedAt: z.string(),
+  //: Carried so the UI can label the data's origin instead of assuming it.
+  source: z.string(),
+});
+
+export type Batch = z.infer<typeof batchSchema>;
+
+export const defectCountSchema = z.object({
+  station: z.string(),
+  defectType: z.string(),
+  count: z.number(),
+});
+
+export type DefectCount = z.infer<typeof defectCountSchema>;
+
+export const batchDefectsSchema = z.object({
+  batchId: z.string(),
+  found: z.boolean(),
+  defectRate: z.number().optional(),
+  units: z.number().optional(),
+  defects: z.number().optional(),
+  breakdown: z.array(defectCountSchema),
+});
+
+export type BatchDefects = z.infer<typeof batchDefectsSchema>;
+
+export const workOrderSchema = z.object({
+  id: z.string(),
+  batchId: z.string().nullable(),
+  station: z.string(),
+  symptom: z.string(),
+  rootCause: z.string().nullable(),
+  action: z.string(),
+  priority: z.string(),
+  status: z.string(),
+  createdAt: z.string(),
+});
+
+export type WorkOrder = z.infer<typeof workOrderSchema>;
+
+/**
+ * One place that fetches and validates. Responses are parsed rather than cast, for the same
+ * reason the SSE stream is: the API is a separate process and its shape can drift.
+ */
+async function getJson<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(path, signal ? { signal } : {});
   if (!response.ok) {
-    throw new Error(`GET /health 返回 ${response.status}`);
+    throw new Error(`GET ${path} 返回 ${response.status}`);
   }
-  return healthSchema.parse(await response.json());
+  return schema.parse(await response.json());
+}
+
+export function fetchHealth(signal?: AbortSignal): Promise<Health> {
+  return getJson("/health", healthSchema, signal);
+}
+
+export async function fetchBatches(limit = 6, signal?: AbortSignal): Promise<Batch[]> {
+  const body = await getJson(
+    `/api/batches?limit=${String(limit)}`,
+    z.object({ batches: z.array(batchSchema) }),
+    signal,
+  );
+  // Oldest first: a yield chart reads left to right in production order.
+  return [...body.batches].reverse();
+}
+
+export function fetchBatchDefects(batchId: string, signal?: AbortSignal): Promise<BatchDefects> {
+  return getJson(`/api/batches/${encodeURIComponent(batchId)}/defects`, batchDefectsSchema, signal);
+}
+
+export async function fetchWorkOrders(options?: {
+  status?: string;
+  limit?: number;
+  signal?: AbortSignal;
+}): Promise<WorkOrder[]> {
+  const params = new URLSearchParams();
+  if (options?.status) {
+    params.set("status", options.status);
+  }
+  params.set("limit", String(options?.limit ?? 10));
+  const body = await getJson(
+    `/api/workorders?${params.toString()}`,
+    z.object({ workOrders: z.array(workOrderSchema) }),
+    options?.signal,
+  );
+  return body.workOrders;
 }
 
 export interface StreamOptions {
