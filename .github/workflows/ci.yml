@@ -84,7 +84,7 @@ jobs:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
       - run: uv sync --frozen
-      - name: Fetch SECOM (not committed: 5 MB of CC BY 4.0 data)
+      - name: "Fetch SECOM (not committed: 5 MB of CC BY 4.0 data)"
         run: uv run python scripts/fetch_secom.py
       - name: Evaluate and compare to the baseline
         run: uv run python -m eval.run_eval --check eval/baselines/baseline.json

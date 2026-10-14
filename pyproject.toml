@@ -16,6 +16,9 @@ dev = [
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov==7.1.0",
+    # Parses .github/workflows in tests/test_repository.py: GitHub rejects an invalid workflow
+    # before running any job, so the only way to catch a YAML typo is to parse it ourselves.
+    "pyyaml==6.0.3",
     # Starlette's TestClient needs an httpx-compatible client. starlette 1.8 prefers
     # `httpx2`; that migration is tracked in docs/adr/README.md (ADR-0005) and not done yet.
     "httpx==0.28.1",
@@ -35,7 +38,7 @@ line-rca-api = { workspace = true }
 # --------------------------------------------------------------------------- #
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["apps/api/tests", "packages/agent-core/tests", "eval/tests"]
+testpaths = ["apps/api/tests", "packages/agent-core/tests", "eval/tests", "tests"]
 addopts = "-q --strict-markers"
 # eval/ is a top-level package in this repository, not an installed one.
 pythonpath = ["."]
