@@ -56,7 +56,9 @@ DEMO_ANSWER = (
     "建议：停机检查传送夹具与导向轮，更换磨损件并重新标定平行度，复测振动后恢复投产。\n"
     "已开立维修工单。\n"
     "\n"
-    "数据来源：simulated 数据集，非真实产线数据。"
+    # The scripted provider cannot read its own observations, so it does not claim a data
+    # source here: every tool observation states its own provenance instead.
+    "数据来源：各步骤的工具观测中标注的 source 字段。"
 )
 
 

@@ -80,6 +80,50 @@ services:
       mosquitto:
         condition: service_started
 
+  # ---------------------------------------------------------------------------
+  #  Live telemetry, behind a profile so the default demo stays deterministic:
+  #
+  #      docker compose --profile live up -d --build
+  #
+  #  The collector is its own process rather than an API background task: in a plant it sits
+  #  at the edge next to the equipment, and a broker outage should not take the API down.
+  # ---------------------------------------------------------------------------
+  collector:
+    profiles: ["live"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        UV_VERSION: ${UV_VERSION:-0.13.1}
+    command: ["python", "-m", "line_rca_api.ingest.collector"]
+    environment:
+      LRC_DATABASE_URL: postgresql+asyncpg://lrc:lrc@postgres:5432/lrc
+      LRC_MQTT_URL: mqtt://mosquitto:1883
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mosquitto:
+        condition: service_started
+    restart: unless-stopped
+
+  # Stands in for an edge gateway reading a PLC. Every message is labelled simulated.
+  simulator:
+    profiles: ["live"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        UV_VERSION: ${UV_VERSION:-0.13.1}
+    command: ["python", "-m", "line_rca_api.ingest.simulator"]
+    environment:
+      LRC_MQTT_URL: mqtt://mosquitto:1883
+      LRC_SIMULATOR_INTERVAL_SECONDS: "5"
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
   web:
     build:
       context: .

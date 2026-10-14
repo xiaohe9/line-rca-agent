@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # --- data ----------------------------------------------------------------
     database_url: str = ""
     mqtt_url: str = ""
+    #: How often the bundled simulator publishes, in seconds.
+    simulator_interval_seconds: float = 10.0
     secom_path: str = "eval/datasets/secom"
 
     @property

@@ -56,12 +56,21 @@ async def _query_telemetry(repo: TelemetryRepository, arguments: dict[str, Any])
                     "ratio": round(ratio, 3),
                 }
             )
-    lines.append("(source: simulated dataset — not real production data)")
+    # Provenance is derived from the rows, not asserted by this function. Readings can arrive
+    # by MQTT from a live line or come from the bundled dataset, and a tool that hard-codes
+    # one of those is guaranteed to eventually describe its own data incorrectly.
+    sources = sorted({reading.source for reading in readings})
+    lines.append(f"(source: {', '.join(sources)})")
 
     return ToolResult(
         ok=True,
         content="\n".join(lines),
-        data={"station": station, "deviations": flagged, "metrics": len(readings)},
+        data={
+            "station": station,
+            "deviations": flagged,
+            "metrics": len(readings),
+            "sources": sources,
+        },
     )
 
 

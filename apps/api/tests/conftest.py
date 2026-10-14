@@ -19,6 +19,8 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from line_rca_api.db.session import sessionmaker_for
 from line_rca_api.deps import provide_session
@@ -61,6 +63,17 @@ def prepared_database(database_url: str) -> Iterator[str]:
         )
     yield database_url
 
+    # Leave the database as the tests found it. Some tests write (a work order, an ingested
+    # telemetry sample), and without this the residue shows up in the local demo — which is
+    # exactly how a test row labelled source='mqtt' ended up in a live run once.
+    subprocess.run(
+        [sys.executable, "-m", "line_rca_api.db.bootstrap", "--reset"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=environment,
+    )
+
 
 @pytest.fixture(scope="session")
 def client(prepared_database: str) -> Iterator[TestClient]:
@@ -78,3 +91,18 @@ def client(prepared_database: str) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def session_factory(prepared_database: str):  # type: ignore[no-untyped-def]
+    """A sessionmaker bound to *this test's* event loop.
+
+    The application's `sessionmaker_for` is deliberately not reused: it is created inside the
+    TestClient's own loop, and handing that pool to pytest's loop produces
+    "got Future attached to a different loop". Async tests own their engine.
+    """
+    engine = create_async_engine(prepared_database, poolclass=NullPool)
+    try:
+        yield async_sessionmaker(engine, expire_on_commit=False)
+    finally:
+        await engine.dispose()

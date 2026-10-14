@@ -48,6 +48,9 @@ class TelemetryReading:
     value: float
     baseline: float
     recorded_at: datetime
+    #: Where the reading came from ("simulated", "mqtt", ...). Carried so an observation can
+    #: state its own provenance instead of a tool hard-coding one and being wrong later.
+    source: str
 
     @property
     def deviation_ratio(self) -> float:
@@ -198,6 +201,7 @@ class SqlTelemetryRepository:
                 value=row.value,
                 baseline=row.baseline,
                 recorded_at=row.recorded_at,
+                source=row.source,
             )
             for row in rows
         ]

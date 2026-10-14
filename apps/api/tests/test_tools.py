@@ -37,8 +37,8 @@ BREAKDOWNS = {
 
 READINGS = {
     "镀膜": [
-        TelemetryReading("镀膜", "vibrationMm", 0.199, 0.06, NOW),
-        TelemetryReading("镀膜", "temperatureC", 68.4, 68.0, NOW),
+        TelemetryReading("镀膜", "vibrationMm", 0.199, 0.06, NOW, "simulated"),
+        TelemetryReading("镀膜", "temperatureC", 68.4, 68.0, NOW, "simulated"),
     ]
 }
 
@@ -248,3 +248,36 @@ async def test_list_work_orders_returns_records(registry: InMemoryToolRegistry) 
     result = await call(registry, "list_work_orders", status="closed", limit=5)
     assert result.ok is True
     assert result.data["ids"] == ["WO-20260901-001"]
+
+
+async def test_query_telemetry_reports_provenance_from_the_data(
+    registry: InMemoryToolRegistry,
+) -> None:
+    result = await call(registry, "query_telemetry", station="镀膜")
+
+    assert result.data["sources"] == ["simulated"]
+    assert "(source: simulated)" in result.content
+
+
+async def test_query_telemetry_does_not_hard_code_its_provenance() -> None:
+    """Readings can arrive over MQTT; a tool that always says "simulated" would lie."""
+
+    class LiveTelemetry:
+        async def stations(self) -> list[str]:
+            return ["镀膜"]
+
+        async def latest_readings(self, station: str) -> list[TelemetryReading]:
+            return [TelemetryReading("镀膜", "vibrationMm", 0.2, 0.06, NOW, "mqtt")]
+
+    live = register_line_tools(
+        InMemoryToolRegistry(),
+        defects=FakeDefects(),
+        telemetry=LiveTelemetry(),
+        work_orders=FakeWorkOrders(),
+    )
+
+    result = await call(live, "query_telemetry", station="镀膜")
+
+    assert result.data["sources"] == ["mqtt"]
+    assert "(source: mqtt)" in result.content
+    assert "simulated" not in result.content

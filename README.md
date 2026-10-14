@@ -32,7 +32,7 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 | `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested |
 | Docker images + compose stack | ✅ built + verified end to end (15 checks) |
 | GitHub Actions CI | ✅ written — unverified until the repo exists on GitHub |
-| MQTT telemetry ingest | ⏳ next (the broker already runs) |
+| MQTT telemetry ingest (collector + simulator) | ✅ implemented + tested |
 | Real LLM providers, vector memory, dataset evaluation | ⏳ later |
 | Public deployment | ⏳ next |
 
@@ -177,6 +177,35 @@ nginx serves the bundle and reverse-proxies `/api` and `/health`, so the browser
 origin and the SSE stream needs no CORS handling. `proxy_buffering off` is what keeps the stream
 incremental rather than delivered in one burst at the end; both are verified — see
 [the M1 report](docs/02-M1兼容性验证报告.md) §13.
+
+### Live telemetry over MQTT
+
+The default stack is deterministic: seeded data, a scripted model, identical numbers every run.
+To watch real messages flow instead:
+
+```powershell
+docker compose --profile live up -d --build
+```
+
+That adds two services. `simulator` stands in for an edge gateway reading a PLC and publishes
+`line/<station>/telemetry`; `collector` subscribes and writes what it receives, labelled
+`source="mqtt"`. The agent then reasons over live readings — and says so, because the provenance
+line in each observation is derived from the rows rather than hard-coded:
+
+```text
+query_telemetry -> (source: mqtt)
+  vibrationMm: 0.1934 vs baseline 0.06 (3.22x) at 2026-10-14T09:44:51  <-- deviation
+```
+
+Either side can run on its own:
+
+```powershell
+uv run python -m line_rca_api.ingest.collector     # broker -> Postgres
+uv run python -m line_rca_api.ingest.simulator     # simulated PLC -> broker
+```
+
+The collector is a separate process rather than an API background task: in a plant it sits at
+the edge next to the equipment, and a broker outage should not take the API down with it.
 
 ### Tests, lint, types
 
