@@ -64,3 +64,7 @@ desktop.ini
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Working copies of documents that must never be published (the resume, its dumps, exports).
+resume/
+*.docx
