@@ -1,0 +1,78 @@
+# syntax=docker/dockerfile:1
+
+# ---------------------------------------------------------------------------
+#  A single-image demo: the API, the built frontend and a SQLite database in
+#  one container. No second service, no database server, no API key.
+#
+#      docker build -f deploy/Dockerfile.demo -t line-rca-demo .
+#      docker run --rm -p 8080:8080 line-rca-demo
+#
+#  This is the shape a free host wants (Hugging Face Spaces, Cloud Run, a
+#  one-click container host) and it is the artifact behind the public demo.
+# ---------------------------------------------------------------------------
+
+# ---------- frontend ----------
+FROM node:24-alpine AS web
+ARG NPM_REGISTRY=https://registry.npmjs.org
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+RUN npm ci --registry "$NPM_REGISTRY"
+COPY apps/web apps/web
+RUN npm run build --workspace @line-rca/web
+
+# ---------- backend ----------
+FROM python:3.12-slim AS api
+ARG PIP_INDEX_URL=https://pypi.org/simple
+ARG UV_VERSION=0.13.1
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
+
+RUN pip install --index-url "$PIP_INDEX_URL" "uv==${UV_VERSION}"
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
+COPY packages/agent-core/pyproject.toml packages/agent-core/README.md packages/agent-core/
+COPY apps/api/pyproject.toml apps/api/README.md apps/api/
+RUN uv sync --frozen --no-dev --no-editable --no-install-project --index-url "$PIP_INDEX_URL"
+
+COPY packages/agent-core/src packages/agent-core/src
+COPY apps/api/src apps/api/src
+RUN uv sync --frozen --no-dev --no-editable --index-url "$PIP_INDEX_URL"
+
+# ---------- runtime ----------
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH" \
+    # Demo defaults: offline, scripted model, simulated data, embedded database.
+    LRC_ENV=prod \
+    LRC_DEMO_MODE=1 \
+    LRC_LLM_PROVIDER=fake \
+    LRC_TRACE_SINK=stdout \
+    LRC_DATABASE_URL=sqlite+aiosqlite:////data/line-rca.db \
+    LRC_WEB_DIST=/app/web
+
+RUN useradd --create-home --uid 10001 app && mkdir -p /data && chown app:app /data
+
+WORKDIR /app
+COPY --from=api --chown=app:app /app/.venv /app/.venv
+COPY --from=web --chown=app:app /app/apps/web/dist /app/web
+
+# The entrypoint migrates and seeds, then serves. Doing it here rather than in the API keeps
+# the "a service does not silently migrate its own database" rule intact.
+COPY --chown=app:app deploy/demo-entrypoint.sh /app/demo-entrypoint.sh
+RUN chmod +x /app/demo-entrypoint.sh
+
+USER app
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+    CMD ["python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2).status == 200 else 1)"]
+
+CMD ["/app/demo-entrypoint.sh"]

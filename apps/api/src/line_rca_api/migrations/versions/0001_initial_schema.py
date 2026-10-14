@@ -84,13 +84,16 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            # sa.func.now() rather than sa.text("now()"): the former compiles per dialect, so
+            # one migration creates the schema on Postgres and on SQLite. The literal was
+            # Postgres-only, which quietly made a single-container demo impossible.
+            server_default=sa.func.now(),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            server_default=sa.func.now(),
             nullable=False,
         ),
         sa.ForeignKeyConstraint(
