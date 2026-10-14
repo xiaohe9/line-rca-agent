@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------------- #
 #  builder — installs the npm workspace and produces the static bundle.
 # --------------------------------------------------------------------------- #
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 
 ARG NPM_REGISTRY=https://registry.npmjs.org
 
