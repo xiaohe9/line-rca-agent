@@ -20,8 +20,10 @@ question ──▶ Plan-and-Execute planner ──▶ ReAct executor ──▶ t
 
 ## Status
 
-Early. This repository is being built in stages; see [`docs/`](docs/) for the plan and the
-[M1 compatibility report](docs/02-M1兼容性验证报告.md) for what is verified to work.
+**Public:** https://github.com/xiaohe9/line-rca-agent
+
+Built in stages; see [`docs/`](docs/) for the plan and the verification reports for what is
+actually measured rather than asserted.
 
 | Area | State |
 |---|---|
@@ -31,12 +33,18 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 | Real tools — defect distribution, telemetry, work orders, similar cases | ✅ implemented + tested |
 | `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested |
 | Docker images + compose stack | ✅ built + verified end to end (15 checks) |
-| Evaluation — SECOM fault injection, calibrated baseline, CI regression gate | ✅ implemented + tested |
-| GitHub Actions CI | ✅ written — unverified until the repo exists on GitHub |
+| Single-container demo (embedded SQLite, no external services) | ✅ built + verified (8 checks) |
 | MQTT telemetry ingest (collector + simulator) | ✅ implemented + tested |
 | Real LLM providers (DeepSeek / any OpenAI-compatible endpoint / Ollama) | ✅ implemented + tested |
-| Real LLM providers, vector memory, dataset evaluation | ⏳ later |
-| Public deployment | ⏳ next |
+| Evaluation — SECOM fault injection, calibrated baseline, CI regression gate | ✅ implemented + tested |
+| GitHub Actions CI | ✅ running on every push |
+| Public demo hosting | ⏳ needs a host account |
+| Vector/episodic memory | ⏳ later |
+
+**Verification.** `ruff`, `ruff format`, `mypy --strict` over 49 source files, and the backend
+suite pass against both Postgres and SQLite; the frontend has 38 tests and a bundle budget
+(139 kB gzip against 300 kB). Reproduce with `uv run pytest`, `npm test`, or `docker compose up`.
+The evaluation has its own gate: `uv run python -m eval.run_eval --check eval/baselines/baseline.json`.
 
 ---
 

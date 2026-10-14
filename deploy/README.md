@@ -83,5 +83,9 @@ Add live telemetry with `docker compose --profile live up -d`.
 | API, if split | Cloudflare Tunnel → local compose | No port forwarding, no static IP, no filing |
 | Model | `fake` for the demo, a real provider for production | The demo must never depend on a key or the network |
 
-**Status: not deployed.** The artifact is built and verified; publishing needs an account, and
-the repository itself still needs the GitHub channel to work (M1 report, section 13).
+**Status: the artifact is built and verified; hosting is not done.** What is missing is an
+account, not a build step — `deploy/Dockerfile.demo` is the whole deliverable, and it was
+verified serving the UI, the API and an embedded database from a single container.
+
+The repository is public at https://github.com/xiaohe9/line-rca-agent, and CI runs on every
+push. That was the blocker recorded in the M1 report, section 13; it is now resolved.
