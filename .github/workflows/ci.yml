@@ -133,17 +133,30 @@ jobs:
           push: false
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+      - name: Build single-container demo image
+        # The deployment artifact, so it gets built on every push like the others.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.demo
+          push: false
+          cache-from: type=gha,scope=demo
+          cache-to: type=gha,mode=max,scope=demo
 
   secrets:
-    name: hygiene · no secrets committed
+    name: hygiene · no secrets in the history
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: gitleaks
+        # The official image rather than gitleaks-action: the action requires a licence for
+        # some account types, and a hygiene gate that fails for licensing reasons teaches
+        # people to ignore it.
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source=/repo --redact --verbose
 
   compose:
     name: compose · configuration is valid
