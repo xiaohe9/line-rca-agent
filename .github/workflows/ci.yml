@@ -72,6 +72,23 @@ jobs:
       - name: Kernel import-direction contract
         run: uv run pytest packages/agent-core/tests/test_contracts.py -v
 
+  evaluation:
+    # The regression gate that makes "evaluation-driven" more than a claim: a change that
+    # lowers root-cause accuracy or raises false positives fails the build.
+    name: eval · root-cause regression against the recorded baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Fetch SECOM (not committed: 5 MB of CC BY 4.0 data)
+        run: uv run python scripts/fetch_secom.py
+      - name: Evaluate and compare to the baseline
+        run: uv run python -m eval.run_eval --check eval/baselines/baseline.json
+
   web:
     name: web · types, lint, tests, build, budget
     runs-on: ubuntu-latest

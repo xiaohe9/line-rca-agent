@@ -1,0 +1,68 @@
+{
+  "provider": "deterministic",
+  "diagnoser": "deviation-baseline",
+  "threshold": 45.0,
+  "thresholdSource": "calibrated",
+  "targetFalsePositiveRate": 0.05,
+  "seed": 20261014,
+  "calibrationSeed": 7,
+  "sensorsPerGroup": 8,
+  "referenceRows": 200,
+  "windowRows": 60,
+  "dataset": {
+    "samples": 1567,
+    "sensors": 590
+  },
+  "metrics": {
+    "cases": 150,
+    "detected": 59,
+    "top1": 49,
+    "top3": 50,
+    "controls": 150,
+    "false_positives": 10,
+    "blind_spot_cases": 36,
+    "blind_spot_detected": 4,
+    "detectionRate": 0.3933,
+    "top1Rate": 0.3267,
+    "top3Rate": 0.3333,
+    "falsePositiveRate": 0.0667,
+    "blindSpotRate": 0.1111
+  },
+  "perKind": {
+    "spike": {
+      "cases": 29,
+      "detected": 15,
+      "top1": 13,
+      "detectionRate": 0.5172,
+      "top1Rate": 0.4483
+    },
+    "drift": {
+      "cases": 33,
+      "detected": 7,
+      "top1": 3,
+      "detectionRate": 0.2121,
+      "top1Rate": 0.0909
+    },
+    "dead": {
+      "cases": 29,
+      "detected": 29,
+      "top1": 29,
+      "detectionRate": 1.0,
+      "top1Rate": 1.0
+    },
+    "decorrelate": {
+      "cases": 36,
+      "detected": 4,
+      "top1": 1,
+      "detectionRate": 0.1111,
+      "top1Rate": 0.0278
+    },
+    "step": {
+      "cases": 23,
+      "detected": 4,
+      "top1": 3,
+      "detectionRate": 0.1739,
+      "top1Rate": 0.1304
+    }
+  }
+}

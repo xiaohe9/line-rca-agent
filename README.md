@@ -31,6 +31,7 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 | Real tools — defect distribution, telemetry, work orders, similar cases | ✅ implemented + tested |
 | `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested |
 | Docker images + compose stack | ✅ built + verified end to end (15 checks) |
+| Evaluation — SECOM fault injection, calibrated baseline, CI regression gate | ✅ implemented + tested |
 | GitHub Actions CI | ✅ written — unverified until the repo exists on GitHub |
 | MQTT telemetry ingest (collector + simulator) | ✅ implemented + tested |
 | Real LLM providers, vector memory, dataset evaluation | ⏳ later |
