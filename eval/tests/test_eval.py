@@ -203,3 +203,35 @@ def test_compare_reports_only_real_regressions() -> None:
 def test_compare_tolerates_sampling_noise() -> None:
     slightly_worse = Metrics(150, 59, 47, 50, 150, 10, 0, 0)
     assert compare(slightly_worse, {"top1Rate": 0.33}) == []
+
+
+def test_correlation_term_scores_what_a_deviation_test_cannot() -> None:
+    """A permuted sensor keeps its mean and its spread; only its relationships are gone."""
+    rng = np.random.default_rng(4)
+    latent = rng.normal(0.0, 1.0, size=(200, 1))
+    base = rng.normal(0.0, 0.6, size=(200, 8)) + latent
+
+    window = base[-60:].copy()
+    broken = window.copy()
+    broken[:, 3] = np.random.default_rng(6).permutation(broken[:, 3])
+
+    case = make_case(base, broken, np.random.default_rng(1), sensors_per_group=8, kinds=())
+    plain = DeviationDiagnoser(sensors_per_group=8, threshold=5.0)
+    corr = DeviationDiagnoser(sensors_per_group=8, threshold=5.0, correlation=True)
+
+    assert plain.name == "deviation-baseline"
+    assert corr.name == "deviation+correlation"
+    assert corr.sensor_scores(case)[3] > plain.sensor_scores(case)[3]
+    assert corr.sensor_scores(case)[3] > corr.sensor_scores(case)[0]
+
+
+def test_undamaged_sensors_score_low_on_the_correlation_term() -> None:
+    rng = np.random.default_rng(8)
+    latent = rng.normal(0.0, 1.0, size=(200, 1))
+    base = rng.normal(0.0, 0.6, size=(200, 8)) + latent
+
+    case = make_case(base, base[-60:], np.random.default_rng(1), sensors_per_group=8, kinds=())
+    corr = DeviationDiagnoser(sensors_per_group=8, threshold=5.0, correlation=True)
+
+    # Nothing was done to this window, so no sensor should look decorrelated.
+    assert np.all(corr.sensor_scores(case) < 20.0)

@@ -211,6 +211,71 @@ def compare(metrics: Metrics, baseline: dict[str, Any]) -> list[str]:
     return problems
 
 
+def select_homogeneous_pool(
+    rows: np.ndarray,
+    *,
+    pool_rows: int,
+    candidates: int,
+    sensors_per_group: int,
+    reference_rows: int,
+    window_rows: int,
+    calibration_controls: int,
+    seed: int,
+    target_fpr: float,
+    correlation: bool,
+) -> tuple[np.ndarray, float, int]:
+    """Pick the contiguous stretch whose own null peak statistic is lowest.
+
+    SECOM spans months and its pass label means the entity passed final test, not that the
+    process was nominal. A pool containing a regime change gives a null peak of 45 sigma, and
+    no fault injected at 4 sigma can clear a threshold set that high — the evaluation ends up
+    measuring the dataset's drift rather than the diagnoser.
+
+    Choosing the calmest stretch is a model-selection step on calibration data: it uses no
+    labels and no injected faults, and it is the honest alternative to tuning a threshold until
+    the numbers look good.
+    """
+    span = pool_rows
+    if rows.shape[0] <= span:
+        best = rows
+        _, peak = calibrate_threshold(
+            best,
+            sensors_per_group=sensors_per_group,
+            reference_rows=reference_rows,
+            window_rows=window_rows,
+            controls=calibration_controls,
+            seed=seed,
+            target_false_positive_rate=target_fpr,
+            correlation=correlation,
+        )
+        return best, peak, 0
+
+    step = max(1, (rows.shape[0] - span) // max(1, candidates - 1)) if candidates > 1 else 0
+    best_block = rows[:span]
+    best_peak = float("inf")
+    best_start = 0
+
+    for index in range(candidates):
+        start = min(index * step, rows.shape[0] - span)
+        block = np.ascontiguousarray(rows[start : start + span])
+        _, peak = calibrate_threshold(
+            block,
+            sensors_per_group=sensors_per_group,
+            reference_rows=reference_rows,
+            window_rows=window_rows,
+            controls=max(50, calibration_controls // 4),
+            seed=seed,
+            target_false_positive_rate=target_fpr,
+            correlation=correlation,
+        )
+        if peak < best_peak:
+            best_peak, best_block, best_start = peak, block, start
+        if start + span >= rows.shape[0]:
+            break
+
+    return best_block, best_peak, best_start
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the RCA baseline on SECOM.")
     parser.add_argument("--cases", type=int, default=150)
@@ -224,10 +289,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--window-rows", type=int, default=60)
     parser.add_argument("--pool-rows", type=int, default=400)
     parser.add_argument(
+        "--pool-scan",
+        type=int,
+        default=0,
+        help="try this many candidate stretches and keep the calmest (0 = use the head)",
+    )
+    parser.add_argument(
         "--threshold",
         type=float,
         default=None,
         help="override the calibrated threshold (default: calibrate)",
+    )
+    parser.add_argument(
+        "--correlation",
+        action="store_true",
+        help="also score each sensor's relationship to its group peers (catches decorrelation)",
     )
     parser.add_argument("--dataset", type=Path, default=secom.DEFAULT_DIRECTORY)
     parser.add_argument("--out", type=Path, default=None, help="write the metrics here")
@@ -239,7 +315,26 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     dataset = secom.load(args.dataset)
-    pool = secom.healthy_window(dataset, args.pool_rows)
+    if args.pool_scan > 0:
+        wide = secom.healthy_window(dataset, min(1400, int((dataset.labels == -1).sum())))
+        pool, scanned_peak, start = select_homogeneous_pool(
+            wide,
+            pool_rows=args.pool_rows,
+            candidates=args.pool_scan,
+            sensors_per_group=args.sensors_per_group,
+            reference_rows=args.reference_rows,
+            window_rows=args.window_rows,
+            calibration_controls=args.calibration_controls,
+            seed=args.calibration_seed,
+            target_fpr=args.target_fpr,
+            correlation=args.correlation,
+        )
+        print(
+            f"pool scan: {args.pool_scan} candidate stretches of {args.pool_rows} rows; "
+            f"calmest starts at row {start} with a null peak of {scanned_peak:.2f}"
+        )
+    else:
+        pool = secom.healthy_window(dataset, args.pool_rows)
 
     print(
         f"SECOM {dataset.shape[0]}x{dataset.shape[1]}  "
@@ -259,6 +354,7 @@ def main(argv: list[str] | None = None) -> int:
             controls=args.calibration_controls,
             seed=args.calibration_seed,
             target_false_positive_rate=args.target_fpr,
+            correlation=args.correlation,
         )
         print(
             f"\ncalibration: {args.calibration_controls} adjacent control window pairs, "
@@ -279,7 +375,11 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
         sensors_per_group=args.sensors_per_group,
     )
-    diagnoser = DeviationDiagnoser(sensors_per_group=args.sensors_per_group, threshold=threshold)
+    diagnoser = DeviationDiagnoser(
+        sensors_per_group=args.sensors_per_group,
+        threshold=threshold,
+        correlation=args.correlation,
+    )
     metrics, detail = run_suite(cases, diagnoser)
 
     print(f"\ndiagnoser: {diagnoser.name}  threshold={diagnoser.threshold:.2f}")

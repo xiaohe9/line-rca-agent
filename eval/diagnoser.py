@@ -51,6 +51,9 @@ SPIKE_BASE_EVIDENCE = 40.0
 #: 59 and left nothing else detectable.
 SPIKE_MIN_OUTLIERS = 3
 SPIKE_MIN_OUTLIER_FRACTION = 0.05
+#: A full loss of correlation becomes this much evidence. Scaled so that it is comparable to
+#: the sigma-like units the other terms use, and calibrated like them rather than assumed.
+CORRELATION_SCALE = 20.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,12 +81,72 @@ def _robust_scale(reference: np.ndarray) -> np.ndarray:
     return np.asarray(np.where(spread > EPSILON, spread, 1.0), dtype=np.float64)
 
 
-class DeviationDiagnoser:
-    name = "deviation-baseline"
+def _safe_correlation(left: np.ndarray, right: np.ndarray) -> float:
+    """Pearson r, or 0 when either side does not vary. Never returns nan."""
+    if np.std(left) <= EPSILON or np.std(right) <= EPSILON:
+        return 0.0
+    value = float(np.corrcoef(left, right)[0, 1])
+    return 0.0 if np.isnan(value) else value
 
-    def __init__(self, *, sensors_per_group: int, threshold: float) -> None:
+
+def _correlation_evidence(
+    reference: np.ndarray, window: np.ndarray, sensors_per_group: int
+) -> np.ndarray:
+    """How much each sensor's relationship to its group peers changed.
+
+    A sensor can keep its mean and its spread and still stop tracking the rest of the line —
+    a loose connector, a swapped channel, a sensor reading a different asset. Deviation tests
+    cannot see that; this compares the correlation, in the reference and in the window, between
+    each sensor and the mean of the others in its group.
+    """
+    n_sensors = reference.shape[1]
+    evidence = np.zeros(n_sensors, dtype=np.float64)
+
+    for start in range(0, n_sensors, sensors_per_group):
+        stop = min(start + sensors_per_group, n_sensors)
+        block_reference = reference[:, start:stop]
+        block_window = window[:, start:stop]
+        if block_reference.shape[1] < 2:
+            continue
+        for offset in range(block_reference.shape[1]):
+            peers_reference = np.delete(block_reference, offset, axis=1).mean(axis=1)
+            peers_window = np.delete(block_window, offset, axis=1).mean(axis=1)
+            delta = abs(
+                _safe_correlation(block_reference[:, offset], peers_reference)
+                - _safe_correlation(block_window[:, offset], peers_window)
+            )
+            evidence[start + offset] = delta
+
+    return evidence * CORRELATION_SCALE
+
+
+class DeviationDiagnoser:
+    """Level-shift, dead and spike evidence, optionally plus a correlation check.
+
+    The correlation term exists because the deviation-only version has a documented blind spot:
+    a sensor can keep its mean and its spread while losing its relationship to the rest of the
+    line. Comparing each sensor against the mean of its group peers in the reference and in the
+    window turns that into something measurable.
+    """
+
+    def __init__(
+        self,
+        *,
+        sensors_per_group: int,
+        threshold: float,
+        correlation: bool = False,
+    ) -> None:
         self._sensors_per_group = sensors_per_group
         self._threshold = threshold
+        self._correlation = correlation
+
+    @property
+    def name(self) -> str:
+        return "deviation+correlation" if self._correlation else "deviation-baseline"
+
+    @property
+    def uses_correlation(self) -> bool:
+        return self._correlation
 
     @property
     def threshold(self) -> float:
@@ -130,7 +193,16 @@ class DeviationDiagnoser:
             0.0,
         )
 
-        combined = np.maximum(np.maximum(shift_z, dead_evidence), spike_evidence)
+        correlation_evidence = (
+            _correlation_evidence(reference, window, self._sensors_per_group)
+            if self._correlation
+            else np.zeros(reference.shape[1])
+        )
+
+        combined = np.maximum(
+            np.maximum(np.maximum(shift_z, dead_evidence), spike_evidence),
+            correlation_evidence,
+        )
         return np.asarray(combined, dtype=np.float64)
 
     def group_scores(self, sensor_scores: np.ndarray) -> dict[int, float]:
@@ -174,6 +246,7 @@ def calibrate_threshold(
     controls: int,
     seed: int,
     target_false_positive_rate: float,
+    correlation: bool = False,
 ) -> tuple[float, float]:
     """Pick the threshold from the null distribution. Returns (threshold, observed max).
 
@@ -185,7 +258,9 @@ def calibrate_threshold(
     from eval.injection import make_case
 
     rng = np.random.default_rng(seed)
-    probe = DeviationDiagnoser(sensors_per_group=sensors_per_group, threshold=float("inf"))
+    probe = DeviationDiagnoser(
+        sensors_per_group=sensors_per_group, threshold=float("inf"), correlation=correlation
+    )
     span = reference_rows + window_rows
     max_start = max(1, pool.shape[0] - span)
 
