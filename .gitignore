@@ -46,6 +46,7 @@ coverage/
 .npm-cache/
 .uv-cache/
 .pip-cache/
+.pnpm-store/
 .tmp/
 
 # ============================================================

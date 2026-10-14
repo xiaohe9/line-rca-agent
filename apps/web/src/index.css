@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: oklch(0.16 0.02 250);
+  --color-ink-900: oklch(0.21 0.025 250);
+  --color-ink-800: oklch(0.28 0.03 250);
+  --color-ink-700: oklch(0.38 0.03 250);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink-950);
+  color: oklch(0.93 0.01 250);
+  font-family:
+    ui-sans-serif, system-ui, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A visible focus ring everywhere, because the timeline is keyboard-drivable. */
+:focus-visible {
+  outline: 2px solid oklch(0.72 0.15 220);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

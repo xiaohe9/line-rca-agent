@@ -1,0 +1,20 @@
+{
+  "name": "line-rca-agent",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Industrial production-line root-cause-analysis agent.",
+  "workspaces": [
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace @line-rca/web",
+    "build": "npm run build --workspace @line-rca/web",
+    "typecheck": "npm run typecheck --workspace @line-rca/web",
+    "lint": "npm run lint --workspace @line-rca/web",
+    "test": "npm run test --workspace @line-rca/web",
+    "api": "uv run uvicorn line_rca_api.main:app --reload --port 8000"
+  }
+}

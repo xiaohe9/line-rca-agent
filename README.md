@@ -25,9 +25,9 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 
 | Area | State |
 |---|---|
-| `packages/agent-core` — framework-free kernel (contracts, trace, planner, executor, memory, tools, fake provider) | ✅ implemented + tested |
+| `packages/agent-core` — framework-free kernel (contracts, trace, planner, executor, memory, tools, fake provider) | ✅ implemented + tested (29 tests) |
 | `apps/api` — FastAPI adapter, SSE streaming, config | ✅ implemented + tested |
-| `apps/web` — React/TS reasoning-timeline UI | ⏳ next |
+| `apps/web` — React/TS reasoning-timeline UI (stream, replay, export) | ✅ implemented + tested (26 tests) |
 | Docker / CI / deployment | ⏳ next |
 | Real LLM providers, pgvector memory, SECOM evaluation, work orders | ⏳ later |
 
@@ -37,6 +37,7 @@ Early. This repository is being built in stages; see [`docs/`](docs/) for the pl
 
 ```text
 apps/api/                 FastAPI adapter: HTTP + SSE, configuration
+apps/web/                 React + TypeScript UI: renders the streamed trace
 packages/agent-core/      framework-free kernel (zero runtime dependencies)
 docs/                     requirements analysis, dependency decisions, ADRs, verification reports
 ```
@@ -57,16 +58,20 @@ such an import, `packages/agent-core/tests/test_contracts.py` fails and names th
 ### Prerequisites
 
 * **Python 3.12**, **Node 24**, **Docker** (for Postgres later).
-* **`uv`** for Python and **`pnpm`/`npm`** for the frontend.
+* **`uv`** for Python and **`npm` workspaces** for the frontend.
 
 ### ⚠️ Environment notes for Windows + this machine
 
-Four things will bite you if you skip them. They are all measured, not guessed.
+These will bite you if you skip them. They are all measured, not guessed.
 
 1. **Do not use `pip`.** On this machine `pip install` fails with
    `Errno 13` / `WinError 5` inside its own temp directories. `uv` works fine. Use `uv` only.
    (Details: [verification report §9](docs/02-M1兼容性验证报告.md).)
-2. **Keep package caches inside the repository.** The default cache locations live outside
+2. **Do not use `pnpm` either.** pnpm 12 cannot open its store operation lock here
+   (`ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK`, `os error 5`), and elevating privileges does not
+   help. This workspace uses **npm workspaces** instead.
+   (Details: [verification report §10](docs/02-M1兼容性验证报告.md).)
+3. **Keep package caches inside the repository.** The default cache locations live outside
    the sandboxed workspace and are refused, which makes even `npm view` fail:
 
    ```powershell
@@ -74,10 +79,11 @@ Four things will bite you if you skip them. They are all measured, not guessed.
    $env:UV_CACHE_DIR     = "$PWD\.uv-cache"
    ```
 
-3. **Frontend `build` / `test` need full access.** Vite 8 runs `exec('net use')` on Windows to
-   resolve real paths; the confined sandbox denies piped stdio (`spawn EPERM`). `tsc` and
-   `eslint` are fine either way.
-4. **TypeScript is pinned to 6.0.3, not 7.x.** TypeScript 7 is the native-compiler rewrite;
+4. **Frontend `build` / `test` may need full access.** Vite 8 runs `exec('net use')` on Windows
+   to resolve real paths; the confined sandbox denies piped stdio (`spawn EPERM`). `tsc` and
+   `eslint` are fine either way. Whether you hit this depends on your agent/session permission
+   mode — with full access, all four gates run unelevated.
+5. **TypeScript is pinned to 6.0.3, not 7.x.** TypeScript 7 is the native-compiler rewrite;
    `typescript-eslint` still caps at `<6.1.0`, so TS 7 breaks linting.
    See [ADR-0001](docs/adr/0001-typescript-pinned-to-6.md).
 
@@ -105,13 +111,41 @@ curl -N -X POST http://127.0.0.1:8000/api/analyze `
 
 Interactive API docs: <http://127.0.0.1:8000/docs>
 
+### Run the web UI
+
+With the API still running:
+
+```powershell
+npm install
+npm run dev            # http://127.0.0.1:5173
+```
+
+The dev server proxies `/api` and `/health` to `http://127.0.0.1:8000`, so the browser stays on
+one origin. Point it elsewhere with `LRC_API_TARGET`.
+
+The UI streams a run and renders it as a timeline. Three things are worth trying:
+
+* **Expand an entry** — tool arguments and raw tool output are one click away.
+* **播放回放 / 回放** — replay the run event by event. `Space`, `←` `→` and `End` drive it, so
+  the timeline is fully keyboard-operable.
+* **导出报告** — export the whole run (goal, answer, every step, every tool result) as
+  Markdown. It is generated from accumulated events, so it works offline and mid-run.
+
 ### Tests, lint, types
 
 ```powershell
+# backend
+uv sync
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
+
+# frontend
+npm run typecheck
+npm run lint
+npm run test
+npm run build
 ```
 
 ---
