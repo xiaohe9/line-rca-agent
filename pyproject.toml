@@ -1,0 +1,88 @@
+[project]
+name = "line-rca-workspace"
+version = "0.0.0"
+description = "Industrial production-line root-cause-analysis agent (monorepo root)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "line-rca-agent-core",
+    "line-rca-api",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    # Starlette's TestClient needs an httpx-compatible client. starlette 1.8 prefers
+    # `httpx2`; that migration is tracked in docs/adr/README.md (ADR-0005) and not done yet.
+    "httpx==0.28.1",
+    "ruff==0.17.0",
+    "mypy==2.4.0",
+]
+
+[tool.uv.workspace]
+members = ["apps/api", "packages/agent-core"]
+
+[tool.uv.sources]
+line-rca-agent-core = { workspace = true }
+line-rca-api = { workspace = true }
+
+# --------------------------------------------------------------------------- #
+#  tests
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps/api/tests", "packages/agent-core/tests"]
+addopts = "-q --strict-markers"
+
+# --------------------------------------------------------------------------- #
+#  lint / format
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["apps/api/src", "apps/api/tests", "packages/agent-core/src", "packages/agent-core/tests"]
+
+[tool.ruff.lint]
+# BLE is on deliberately: broad `except Exception` is used in a few places (a failing
+# trace sink, a failing tool) and each one must carry an explicit justification.
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF", "ASYNC", "S", "BLE"]
+ignore = [
+    # Turkish-i style false positives on Chinese text handling are not worth the noise.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # `assert` is the correct tool in tests; S101 would flag every one of them.
+    "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "B011"]
+
+# --------------------------------------------------------------------------- #
+#  types
+# --------------------------------------------------------------------------- #
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["apps/api/src", "packages/agent-core/src"]
+mypy_path = "apps/api/src:packages/agent-core/src"
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["pydantic_settings.*"]
+ignore_missing_imports = true
+
+# --------------------------------------------------------------------------- #
+#  coverage
+# --------------------------------------------------------------------------- #
+[tool.coverage.run]
+branch = true
+source = ["line_rca_api", "line_rca_agent"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

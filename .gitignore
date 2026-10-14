@@ -1,0 +1,65 @@
+# ============================================================
+#  secrets & private material — must never be committed
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.docx
+_tools/
+
+# ============================================================
+#  throwaway spikes / experiment logs
+# ============================================================
+_spike/
+
+# ============================================================
+#  Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+build/
+
+# ============================================================
+#  Node / frontend
+# ============================================================
+node_modules/
+dist/
+dist-ssr/
+.vite/
+coverage/
+*.local
+
+# ============================================================
+#  package-manager caches (kept inside the repo by necessity:
+#  the default locations live outside the sandboxed workspace)
+# ============================================================
+.npm-cache/
+.uv-cache/
+.pip-cache/
+.tmp/
+
+# ============================================================
+#  data — fetched by scripts, never committed
+# ============================================================
+eval/datasets/
+
+# ============================================================
+#  OS / editor
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

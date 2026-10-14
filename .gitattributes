@@ -1,0 +1,22 @@
+# Normalise line endings in the repository, not on each machine.
+# Without this, Windows checkouts rewrite every file to CRLF and every diff looks total.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+
+# Lockfiles are generated; keep them out of language stats and conflict noise.
+uv.lock text eol=lf
+pnpm-lock.yaml text eol=lf
+package-lock.json text eol=lf
+
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
