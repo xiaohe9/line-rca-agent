@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "motion": "14.2.0",
+    "motion": "14.3.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.6.7"
