@@ -22,7 +22,7 @@ dev = [
     # Starlette's TestClient needs an httpx-compatible client. starlette 1.8 prefers
     # `httpx2`; that migration is tracked in docs/adr/README.md (ADR-0005) and not done yet.
     "httpx==0.28.1",
-    "ruff==0.17.0",
+    "ruff==0.17.1",
     "mypy==2.4.0",
 ]
 
