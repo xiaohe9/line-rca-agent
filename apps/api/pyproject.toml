@@ -11,7 +11,7 @@ dependencies = [
     "pydantic==2.14.1",
     "pydantic-settings==2.15.0",
     # [asyncio] brings greenlet, which SQLAlchemy's async layer requires.
-    "sqlalchemy[asyncio]==2.1.4",
+    "sqlalchemy[asyncio]==2.1.5",
     "asyncpg==0.32.0",
     "alembic==1.20.0",
     # SQLite support, so the whole product runs in one container with no database service.
