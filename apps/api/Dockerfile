@@ -4,7 +4,7 @@
 #  builder — resolves the uv workspace once, so the runtime image carries only
 #  the virtual environment and no package manager.
 # --------------------------------------------------------------------------- #
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 # A build arg, not a hard-coded mirror: the same Dockerfile works everywhere and a
 # fast local index can be injected without editing the file. Note that mirrors lag
@@ -38,7 +38,7 @@ RUN uv sync --frozen --no-dev --no-editable --index-url "$PIP_INDEX_URL"
 # --------------------------------------------------------------------------- #
 #  runtime
 # --------------------------------------------------------------------------- #
-FROM python:3.12-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
