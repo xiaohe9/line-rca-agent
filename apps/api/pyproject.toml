@@ -9,7 +9,7 @@ dependencies = [
     "fastapi==0.143.0",
     "uvicorn==0.54.0",
     "pydantic==2.14.1",
-    "pydantic-settings==2.15.0",
+    "pydantic-settings==2.16.0",
     # [asyncio] brings greenlet, which SQLAlchemy's async layer requires.
     "sqlalchemy[asyncio]==2.1.4",
     "asyncpg==0.32.0",
