@@ -24,7 +24,7 @@ RUN npm run build --workspace @line-rca/web
 #  The unprivileged variant is used so the container does not run as root: it listens
 #  on 8080 as a non-root user, which is also why the template below binds 8080.
 # --------------------------------------------------------------------------- #
-FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 
 # The official image runs envsubst over /etc/nginx/templates/*.template, which is how the
 # upstream stays configurable without shipping a machine-specific config. Only ${API_UPSTREAM}
