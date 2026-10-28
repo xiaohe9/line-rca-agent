@@ -13,7 +13,7 @@ dependencies = [
     # [asyncio] brings greenlet, which SQLAlchemy's async layer requires.
     "sqlalchemy[asyncio]==2.1.4",
     "asyncpg==0.32.0",
-    "alembic==1.20.0",
+    "alembic==1.20.1",
     # SQLite support, so the whole product runs in one container with no database service.
     "aiosqlite==0.22.1",
     "paho-mqtt==2.1.0",
