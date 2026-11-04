@@ -13,8 +13,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest==9.1.1",
-    "pytest-asyncio==1.4.0",
+    "pytest==9.2.0",
+    "pytest-asyncio==1.4.1",
     "pytest-cov==7.1.0",
     # Parses .github/workflows in tests/test_repository.py: GitHub rejects an invalid workflow
     # before running any job, so the only way to catch a YAML typo is to parse it ourselves.
@@ -22,8 +22,8 @@ dev = [
     # Starlette's TestClient needs an httpx-compatible client. starlette 1.8 prefers
     # `httpx2`; that migration is tracked in docs/adr/README.md (ADR-0005) and not done yet.
     "httpx==0.28.1",
-    "ruff==0.17.0",
-    "mypy==2.4.0",
+    "ruff==0.17.3",
+    "mypy==2.4.1",
 ]
 
 [tool.uv.workspace]
